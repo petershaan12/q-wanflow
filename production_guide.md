@@ -32,11 +32,15 @@ SUPPORT_EMAIL=
 
 ## 3. Jalankan Aplikasi
 ```bash
-# Build dan jalankan menggunakan Docker Compose
+# Jalankan aplikasi (Build dan jalankan menggunakan Docker Compose)
 docker-compose up --build -d
 
-# Jalankan migrasi tabel (WAJIB sekali saja)
+# 1. Buat tabel dasar (WAJIB sekali saja)
+docker-compose exec backend python scripts/init_db.py
+
+# 2. Jalankan migrasi kolom tambahan
 docker-compose exec backend python scripts/add_auth_columns.py
+docker-compose exec backend python scripts/add_storage_column.py
 ```
 
 ## 4. Monitoring & Info
