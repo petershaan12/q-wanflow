@@ -20,19 +20,22 @@ export const getLinkedText = (id, handleId, getEdges, getNodes) => {
     const currentEdges = getEdges();
     const currentNodes = getNodes();
     const sourceEdges = currentEdges.filter(e => e.target === id && e.targetHandle === handleId);
+
     return sourceEdges.map(edge => {
         const sourceNode = currentNodes.find(n => n.id === edge.source);
         if (!sourceNode) return '';
+
+        const data = sourceNode.data || {};
+        // Try all common text/content fields
         return (
-            sourceNode.data?.prompt ||
-            sourceNode.data?.prompt_template ||
-            sourceNode.data?.val ||
-            sourceNode.data?.result ||
-            sourceNode.data?.outputText ||
-            sourceNode.data?.text ||
-            ((sourceNode.type === 'wan_input' || sourceNode.type === 'input') && sourceNode.data?.assetType === 'text'
-                ? sourceNode.data?.url
-                : '') ||
+            data.prompt ||
+            data.prompt_template ||
+            data.val ||
+            data.result ||
+            data.outputText ||
+            data.text ||
+            data.content ||
+            (data.assetType === 'text' ? data.url : '') ||
             ''
         );
     }).filter(Boolean).join('\n\n');
@@ -47,10 +50,23 @@ export const getLinkedImageUrl = (id, handleId, getEdges, getNodes) => {
     const sourceNode = getNodes().find(n => n.id === edge.source);
     if (!sourceNode) return '';
 
-    if (sourceNode.data?.imageUrl) return sourceNode.data.imageUrl;
+    const data = sourceNode.data || {};
+    // 1. Direct image field
+    if (data.imageUrl) return data.imageUrl;
+
+    // 2. Input/Source nodes
     if (sourceNode.type === 'input' || sourceNode.type === 'wan_input') {
-        if (sourceNode.data?.assetType === 'image') return sourceNode.data?.url || '';
+        const type = data.assetType || 'image';
+        // If it's explicitly an image, or it looks like a URL pointing to an image
+        if (type === 'image' || (data.url && data.url.match(/\.(jpeg|jpg|gif|png|webp)/i))) {
+            return data.url || '';
+        }
     }
+
+    // 3. Fallback to generic URL/Content if it looks like an image
+    if (data.url && data.url.match(/\.(jpeg|jpg|gif|png|webp)/i)) return data.url;
+    if (data.content && data.content.match(/\.(jpeg|jpg|gif|png|webp)/i)) return data.content;
+
     return '';
 };
 

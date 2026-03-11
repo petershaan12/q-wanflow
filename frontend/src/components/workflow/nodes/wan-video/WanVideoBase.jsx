@@ -20,19 +20,21 @@ export const getLinkedText = (id, handleId, getEdges, getNodes) => {
     const currentEdges = getEdges();
     const currentNodes = getNodes();
     const sourceEdges = currentEdges.filter(e => e.target === id && e.targetHandle === handleId);
+
     return sourceEdges.map(edge => {
         const sourceNode = currentNodes.find(n => n.id === edge.source);
         if (!sourceNode) return '';
+
+        const data = sourceNode.data || {};
         return (
-            sourceNode.data?.prompt ||
-            sourceNode.data?.prompt_template ||
-            sourceNode.data?.val ||
-            sourceNode.data?.result ||
-            sourceNode.data?.outputText ||
-            sourceNode.data?.text ||
-            ((sourceNode.type === 'wan_input' || sourceNode.type === 'input') && sourceNode.data?.assetType === 'text'
-                ? sourceNode.data?.url
-                : '') ||
+            data.prompt ||
+            data.prompt_template ||
+            data.val ||
+            data.result ||
+            data.outputText ||
+            data.text ||
+            data.content ||
+            (data.assetType === 'text' ? data.url : '') ||
             ''
         );
     }).filter(Boolean).join('\n\n');
@@ -47,22 +49,26 @@ export const getLinkedMediaUrl = (id, handleId, getEdges, getNodes) => {
     const sourceNode = getNodes().find(n => n.id === edge.source);
     if (!sourceNode) return { image: '', video: '' };
 
-    // 1. Wan Image Nodes (T2I / Edit)
-    if (sourceNode.type === 'wan_image_t2i' || sourceNode.type === 'wan_image_edit')
-        return { image: sourceNode.data?.imageUrl || '', video: '' };
+    const data = sourceNode.data || {};
+    const res = { image: '', video: '' };
 
-    // 2. Wan Video Nodes
-    if (sourceNode.type?.startsWith('wan_video_'))
-        return { image: '', video: sourceNode.data?.videoUrl || '' };
+    // 1. Direct fields
+    if (data.imageUrl) res.image = data.imageUrl;
+    if (data.videoUrl) res.video = data.videoUrl;
 
-    // 3. Input Nodes (Manual upload/Library)
+    // 2. Input/Source nodes
     if (sourceNode.type === 'wan_input' || sourceNode.type === 'input') {
-        const type = sourceNode.data?.assetType;
-        const url = sourceNode.data?.url || '';
-        if (type === 'image') return { image: url, video: '' };
-        if (type === 'video') return { image: '', video: url };
+        const type = data.assetType;
+        const url = data.url || '';
+        if (type === 'image' || url.match(/\.(jpeg|jpg|gif|png|webp)/i)) res.image = url;
+        if (type === 'video' || url.match(/\.(mp4|webm|avi|mov)/i)) res.video = url;
     }
-    return { image: '', video: '' };
+
+    // 3. Asset-like fields in generic nodes
+    if (!res.image && data.url?.match(/\.(jpeg|jpg|gif|png|webp)/i)) res.image = data.url;
+    if (!res.video && data.url?.match(/\.(mp4|webm|avi|mov)/i)) res.video = data.url;
+
+    return res;
 };
 
 /**
