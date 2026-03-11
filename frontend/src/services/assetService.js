@@ -14,6 +14,17 @@ export const assetService = {
     return response.data;
   },
 
+  uploadAsset: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axios.post('/api/assets/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  },
+
   updateAsset: async (id, formData) => {
     const response = await axios.put(`/api/assets/${id}`, formData);
     return response.data;

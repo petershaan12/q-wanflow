@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Package, Search, Grid, List,
     MoreVertical, Download, ExternalLink, Trash2,
@@ -17,6 +17,8 @@ const AssetPage = () => {
     const [tempName, setTempName] = useState('');
     const [storageInfo, setStorageInfo] = useState(null);
     const [storageLoading, setStorageLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef(null);
 
     const fetchAssets = async () => {
         try {
@@ -46,6 +48,31 @@ const AssetPage = () => {
         fetchAssets();
         fetchStorageInfo();
     }, []);
+
+    const handleUploadClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            setUploading(true);
+            await assetService.uploadAsset(file);
+            await fetchAssets();
+            await fetchStorageInfo();
+            // Optional: add a success toast here
+        } catch (err) {
+            console.error('Error uploading asset:', err);
+            alert(err.response?.data?.detail || 'Failed to upload asset');
+        } finally {
+            setUploading(false);
+            e.target.value = ''; // Reset input
+        }
+    };
 
     const openAssetInNewTab = (asset) => {
         const resourceUrl = asset.content || asset.file_path;
@@ -217,8 +244,19 @@ const AssetPage = () => {
                             </button>
                         </div>
 
-                        <button className="btn btn-primary btn-sm h-10 rounded-xl gap-2 font-bold shadow-lg shadow-primary/20 px-5">
-                            <Plus size={16} /> Upload
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                        <button 
+                            onClick={handleUploadClick}
+                            disabled={uploading}
+                            className="btn btn-primary btn-sm h-10 rounded-xl gap-2 font-bold shadow-lg shadow-primary/20 px-5"
+                        >
+                            {uploading ? <span className="loading loading-spinner loading-sm"></span> : <Plus size={16} />} 
+                            {uploading ? 'Uploading...' : 'Upload'}
                         </button>
                     </div>
                 </div>
