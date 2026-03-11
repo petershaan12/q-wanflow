@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+[data-theme='qwenlight'] {
+  --base-100: 255 255 255;
+  --base-200: 248 250 252;
+  --base-300: 241 245 249;
+  --base-content: 15 23 42;
+}
+
+[data-theme='qwendark'] {
+  --base-100: 15 17 23;
+  --base-200: 22 24 30;
+  --base-300: 10 12 16;
+  --base-content: 216 226 239;
+}
+
+@layer base {
+  body {
+    @apply text-base-content font-sans antialiased;
+    background: transparent !important;
+  }
+
+  /* Disable DaisyUI glow/focus shadow globally */
+  button,
+  .btn,
+  .input,
+  .select,
+  .textarea,
+  .toggle,
+  .card,
+  .modal-box,
+  .dropdown-content {
+    box-shadow: none !important;
+  }
+
+  .btn:focus,
+  .btn:focus-visible,
+  .input:focus,
+  .input:focus-visible,
+  .select:focus,
+  .select:focus-visible,
+  .textarea:focus,
+  .textarea:focus-visible,
+  .toggle:focus,
+  .toggle:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Custom Utilities & Animations */
+@layer components {
+  .glass-card {
+    @apply bg-base-100/70 backdrop-blur-xl border border-base-content/5 shadow-xl;
+  }
+
+  .btn-gold {
+    @apply bg-gradient-to-br from-yellow-500 to-amber-500 text-black border-none hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg shadow-amber-500/15 active:scale-95;
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-base-content/10 rounded-full hover:bg-base-content/20 transition-colors;
+}
+
+/* Custom Animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+/* Background Pulse Animations */
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.1); opacity: 0.45; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+@keyframes pulse-slower {
+  0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.3; }
+  50% { transform: scale(1.15) translate(20px, -20px); opacity: 0.4; }
+}
+
+.animate-pulse-slower {
+  animation: pulse-slower 10s ease-in-out infinite;
+}
+
+@keyframes pulse-slowest {
+  0%, 100% { transform: scale(1); opacity: 0.25; }
+  50% { transform: scale(1.2); opacity: 0.35; }
+}
+
+.animate-pulse-slowest {
+  animation: pulse-slowest 12s ease-in-out infinite;
+}
+/* --- React Flow Customizations --- */
+
+.react-flow__handle {
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Primary color highlights when active/connecting */
+.react-flow__handle:hover, 
+.react-flow__handle.connecting,
+.react-flow__connection-path,
+.react-flow__edge.selected .react-flow__edge-path {
+  border-color: #7c5cfc !important; 
+  background: #7c5cfc !important; 
+  stroke: #7c5cfc !important;
+}
+
+/* Eraser Mode Feedback */
+.tool-mode-eraser .react-flow__node:hover {
+  border-color: #ef4444 !important; 
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1) !important;
+}
+
+.tool-mode-eraser .react-flow__edge:hover .react-flow__edge-path,
+.tool-mode-eraser .react-flow__edge:hover path {
+  stroke: #ef4444 !important; 
+  stroke-width: 3px !important;
+  cursor: crosshair;
+}
+
+.tool-mode-eraser .react-flow__handle:hover {
+  border-color: #ef4444 !important; 
+  background: #ef4444 !important;
+  transform: scale(1.1);
+}
+
+/* Hide default delete button when Eraser tool is active */
+.tool-mode-eraser .group:hover button {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* --- Tool Mode Cursors & Interaction Bubbles --- */
+
+/* Force User SVG Cursors over the entire canvas and elements */
+.tool-mode-comment, 
+.tool-mode-comment * {
+  cursor: url("/comment.svg") 0 22, auto !important;
+}
+
+.tool-mode-eraser, 
+.tool-mode-eraser * {
+  cursor: url("/erase.svg") 2 2, auto !important;
+}
+
+/* Eraser Mode - Deletion Highlighting */
+.tool-mode-eraser .react-flow__node:hover {
+  border-color: #ef4444 !important;
+  border-width: 2px !important;
+  box-shadow: none !important;
+}
+
+.tool-mode-eraser .react-flow__edge-path {
+  stroke-width: 2.5px !important;
+}
+
+.tool-mode-eraser .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3px !important;
+  stroke: #ef4444 !important;
+}
+
+/* Massive hitbox for edges in Eraser mode to ensure smooth one-click deletion */
+.tool-mode-eraser .react-flow__edge-interaction {
+  stroke-width: 48px !important;
+  stroke-opacity: 0 !important;
+  pointer-events: all !important;
+}
+
+/* Hide node delete buttons in eraser mode to avoid UI clutter */
+.tool-mode-eraser .group:hover button {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

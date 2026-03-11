@@ -1,0 +1,47 @@
+# dependencies (ignore in any nested folder)
+node_modules/
+**/node_modules/
+
+# build output (ignore in any nested folder)
+dist/
+**/dist/
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# virtual environments
+venv/
+.venv/
+**/venv/
+**/.venv/
+
+# uploads / user files
+uploads/
+**/uploads/
+
+# logs / static (backend generated files)
+logs/
+**/logs/
+static/
+**/static/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
