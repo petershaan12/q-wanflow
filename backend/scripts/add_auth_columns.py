@@ -9,40 +9,40 @@ from app.core.config import settings
 
 def migrate():
     engine = create_engine(settings.DATABASE_URL)
+    
+    # List of migration queries
+    migrations = [
+        ("hashed_password", "ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255)"),
+        ("is_verified", "ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE"),
+        ("otp_code", "ALTER TABLE users ADD COLUMN otp_code VARCHAR(6)"),
+        ("otp_expiry", "ALTER TABLE users ADD COLUMN otp_expiry TIMESTAMP WITH TIME ZONE")
+    ]
+    
+    for col, query in migrations:
+        with engine.connect() as conn:
+            try:
+                print(f"Trying to add column: {col}...")
+                conn.execute(text(query))
+                conn.commit()
+                print(f"SUCCESS: Added column {col}")
+            except Exception as e:
+                if "already exists" in str(e).lower():
+                    print(f"INFO: Column {col} already exists, skipping.")
+                else:
+                    print(f"ERROR adding {col}: {e}")
+                conn.rollback()
+    
+    # Special update for is_verified for Google users
     with engine.connect() as conn:
-        print("Adding new columns to 'users' table...")
-        
         try:
-            # 1. hashed_password
-            conn.execute(text("ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255)"))
-            print("Added column: hashed_password")
-        except Exception as e:
-            print(f"Skipping hashed_password: {e}")
-
-        try:
-            # 2. is_verified
-            conn.execute(text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE"))
             conn.execute(text("UPDATE users SET is_verified = TRUE WHERE google_id IS NOT NULL"))
-            print("Added column: is_verified")
+            conn.commit()
+            print("SUCCESS: Updated is_verified for Google users")
         except Exception as e:
-            print(f"Skipping is_verified: {e}")
+            print(f"Error updating is_verified: {e}")
+            conn.rollback()
 
-        try:
-            # 3. otp_code
-            conn.execute(text("ALTER TABLE users ADD COLUMN otp_code VARCHAR(6)"))
-            print("Added column: otp_code")
-        except Exception as e:
-            print(f"Skipping otp_code: {e}")
-
-        try:
-            # 4. otp_expiry
-            conn.execute(text("ALTER TABLE users ADD COLUMN otp_expiry TIMESTAMP WITH TIME ZONE"))
-            print("Added column: otp_expiry")
-        except Exception as e:
-            print(f"Skipping otp_expiry: {e}")
-
-        conn.commit()
-    print("Migration complete!")
+    print("Migration finished!")
 
 if __name__ == "__main__":
     migrate()
