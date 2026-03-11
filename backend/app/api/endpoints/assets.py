@@ -4,6 +4,7 @@ from typing import List
 from app.api import schemas
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.config import settings
 from app.services import asset_service
 from app.models.user import User
 
@@ -76,15 +77,17 @@ def upload_asset(
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    url = f"/static/assets/{unique_filename}"
+    url_path = f"/static/assets/{unique_filename}"
+    base_url = settings.BASE_URL.rstrip("/")
+    full_url = f"{base_url}{url_path}"
     
     # Create asset record
     asset = asset_service.create_asset(
         user_id=current_user.id,
         name=filename,
         asset_type=asset_type,
-        content=url,
-        file_path=url,
+        content=full_url,
+        file_path=full_url,
         file_size=file_size,
         db=db
     )
