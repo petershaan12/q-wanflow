@@ -53,11 +53,11 @@ export const getLinkedImageUrl = (id, handleId, getEdges, getNodes) => {
     const data = sourceNode.data || {};
     // 1. Direct image field
     if (data.imageUrl) return data.imageUrl;
-    if (data.url && (data.assetType === 'image' || data.url.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i))) return data.url;
+    if (data.url && (data.assetType === 'image' || data.url.match(/\.(jpeg|jpg|png|bmp)/i))) return data.url;
 
     // 2. Fallback to generic URL/Content if it looks like an image
     const potentialUrl = data.url || data.content || data.val || '';
-    if (typeof potentialUrl === 'string' && potentialUrl.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i)) {
+    if (typeof potentialUrl === 'string' && potentialUrl.match(/\.(jpeg|jpg|png|bmp)/i)) {
         return potentialUrl;
     }
 

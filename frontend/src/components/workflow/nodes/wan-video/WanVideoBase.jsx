@@ -59,9 +59,9 @@ export const getLinkedMediaUrls = (id, handleId, getEdges, getNodes) => {
         // Helper to push to results based on URL format or assetType
         const addUrl = (url, typeHint) => {
             if (!url || typeof url !== 'string') return;
-            if (typeHint === 'image' || url.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i)) {
+            if (typeHint === 'image' || url.match(/\.(jpeg|jpg|png|bmp)/i)) {
                 results.images.push(url);
-            } else if (typeHint === 'video' || url.match(/\.(mp4|webm|avi|mov)/i)) {
+            } else if (typeHint === 'video' || url.match(/\.(mp4)/i)) {
                 results.videos.push(url);
             }
         };
@@ -161,7 +161,16 @@ export const VideoPreview = ({ videoUrl, modeBadge, aspectClass, loadingStatus, 
     <div className={`mx-3 mt-1 rounded-xl overflow-hidden flex items-center justify-center relative transition-all duration-300 ${dark ? 'bg-[#121212]' : 'bg-white'}`}>
         <div className={`w-full h-full flex items-center justify-center transition-opacity duration-300 ${loadingStatus === 'generating' || loadingStatus === 'enhancing' ? 'opacity-0 invisible' : 'opacity-100'}`}>
             {videoUrl
-                ? <video src={videoUrl} className="w-full h-auto max-h-[380px] object-contain block transition-all duration-500" controls />
+                ? <video 
+                    key={videoUrl}
+                    src={videoUrl} 
+                    className="w-full h-auto max-h-[380px] object-contain block transition-all duration-500" 
+                    controls 
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                />
                 : <div className={`flex items-center justify-center w-full ${aspectClass}`}>
                     <Video size={36} strokeWidth={1} className={dark ? 'text-white/10' : 'text-black/10'} />
                 </div>

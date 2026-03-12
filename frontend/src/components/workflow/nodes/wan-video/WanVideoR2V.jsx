@@ -119,8 +119,8 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
                     </div>
                     <ConnectionBadge
                         count={connectedPromptsCount}
-                        imageLinked={referenceUrls.filter(u => u.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i)).length}
-                        videoLinked={referenceUrls.filter(u => u.match(/\.(mp4|webm|avi|mov)/i)).length}
+                        imageLinked={referenceUrls.filter(u => u.match(/\.(jpeg|jpg|png|bmp)/i)).length}
+                        videoLinked={referenceUrls.filter(u => u.match(/\.(mp4)/i)).length}
                     />
                 </ControlsRow>
             </NodeBase>

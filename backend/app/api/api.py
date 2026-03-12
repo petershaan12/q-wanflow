@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, workflows, nodes, users, ai, assets, util
+from app.api.endpoints import auth, workflows, nodes, users, ai, assets, util, admin
 
 api_router = APIRouter()
 
@@ -10,3 +10,4 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(ai.router, prefix="/ai", tags=["ai"])
 api_router.include_router(assets.router, prefix="/assets", tags=["assets"])
 api_router.include_router(util.router, prefix="/util", tags=["util"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])

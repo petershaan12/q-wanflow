@@ -32,9 +32,9 @@ def upload_asset(
     # Security: Whitelist allowed extensions
     ALLOWED_EXTENSIONS = {
         # Images
-        "jpg", "jpeg", "png", "gif", "webp", "svg",
+        "jpg", "jpeg", "png",
         # Video
-        "mp4", "webm", "avi", "mov",
+        "mp4",
         # Audio
         "mp3", "wav", "ogg", "m4a",
         # Documents / Prompts
@@ -51,9 +51,9 @@ def upload_asset(
         )
     
     asset_type = "file"
-    if ext in ["jpg", "jpeg", "png", "gif", "webp", "svg"]:
+    if ext in ["jpg", "jpeg", "png"]:
         asset_type = "image"
-    elif ext in ["mp4", "webm", "avi", "mov"]:
+    elif ext in ["mp4"]:
         asset_type = "video"
     elif ext in ["mp3", "wav", "ogg", "m4a"]:
         asset_type = "audio"

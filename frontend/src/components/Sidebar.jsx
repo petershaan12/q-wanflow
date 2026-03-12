@@ -5,7 +5,7 @@ import {
     Home, Workflow, Database, Plus,
     LogOut, Settings as SettingsIcon,
     ChevronUp, ChevronDown, PanelLeftClose, PanelLeftOpen,
-    Sun, Moon, Shield, FolderPlus, Crown, Zap
+    Sun, Moon, Shield, FolderPlus, Crown, Zap, Terminal
 } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
 import useThemeStore from '../stores/themeStore';
@@ -52,6 +52,7 @@ const Sidebar = ({
 
     const adminNav = [
         { icon: Shield, label: 'Manage Users', active: location.pathname === '/admin', onClick: () => navigate('/admin') },
+        { icon: Terminal, label: 'System Logs', active: location.pathname === '/admin/logs', onClick: () => navigate('/admin/logs') },
     ];
 
     const footerNav = [

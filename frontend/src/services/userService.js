@@ -56,5 +56,15 @@ export const userService = {
       console.error('Error fetching stats:', error);
       return { totalUsers: 0, totalWorkflows: 0, activeRuns: 0, apiUsage: 0 };
     }
+  },
+
+  getLogs: async (lines = 100) => {
+    try {
+      const response = await axios.get(`/api/admin/logs?lines=${lines}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      throw error;
+    }
   }
 };

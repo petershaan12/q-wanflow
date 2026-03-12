@@ -11,6 +11,7 @@ import WorkflowEditorPage from './page/WorkflowEditorPage';
 import AssetPage from './page/AssetPage';
 import AdminPage from './page/AdminPage';
 import SettingsPage from './page/SettingsPage';
+import AdminLogsPage from './page/AdminLogsPage';
 import SupportPage from './page/SupportPage';
 import SharedWorkflowHandler from './page/SharedWorkflowHandler';
 import DashboardRoute from './components/DashboardRoute';
@@ -57,6 +58,16 @@ function App() {
                     element={
                         isAdmin ? (
                             <DashboardRoute><AdminPage /></DashboardRoute>
+                        ) : (
+                            <Navigate to="/dashboard" replace />
+                        )
+                    }
+                />
+                <Route
+                    path="/admin/logs"
+                    element={
+                        isAdmin ? (
+                            <DashboardRoute><AdminLogsPage /></DashboardRoute>
                         ) : (
                             <Navigate to="/dashboard" replace />
                         )

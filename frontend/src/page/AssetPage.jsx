@@ -248,6 +248,7 @@ const AssetPage = () => {
                             type="file"
                             ref={fileInputRef}
                             onChange={handleFileChange}
+                            accept="image/jpeg,image/png,video/mp4,audio/mpeg,audio/wav,audio/ogg,text/plain,application/json,text/markdown,application/pdf,text/csv"
                             className="hidden"
                         />
                         <button 
