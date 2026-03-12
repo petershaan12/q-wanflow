@@ -154,42 +154,97 @@ export const NegativePromptArea = ({ negativePrompt, setNegativePrompt, upd, dar
     </div>
 );
 
-/**
- * Shared video preview.
- */
-export const VideoPreview = ({ videoUrl, modeBadge, aspectClass, loadingStatus, loadingMessage, loadingProgress, clearStatus, dark }) => (
-    <div className={`mx-3 mt-1 rounded-xl overflow-hidden flex items-center justify-center relative transition-all duration-300 ${dark ? 'bg-[#121212]' : 'bg-white'}`}>
-        <div className={`w-full h-full flex items-center justify-center transition-opacity duration-300 ${loadingStatus === 'generating' || loadingStatus === 'enhancing' ? 'opacity-0 invisible' : 'opacity-100'}`}>
-            {videoUrl
-                ? <video 
-                    key={videoUrl}
-                    src={videoUrl} 
-                    className="w-full h-auto max-h-[380px] object-contain block transition-all duration-500" 
-                    controls 
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                />
-                : <div className={`flex items-center justify-center w-full ${aspectClass}`}>
-                    <Video size={36} strokeWidth={1} className={dark ? 'text-white/10' : 'text-black/10'} />
-                </div>
-            }
+export const VideoPreview = ({ videoUrl, modeBadge, aspectClass, loadingStatus, loadingMessage, loadingProgress, clearStatus, dark }) => {
+    const [hasError, setHasError] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
+    // Reset error state when videoUrl changes
+    React.useEffect(() => {
+        setHasError(false);
+    }, [videoUrl]);
+
+    return (
+        <div 
+            className={`mx-3 mt-1 rounded-xl overflow-hidden flex items-center justify-center relative transition-all duration-300 group/vid ${dark ? 'bg-[#0a0a0a]' : 'bg-white'}`}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            <div className={`w-full h-full flex items-center justify-center transition-opacity duration-300 ${loadingStatus === 'generating' || loadingStatus === 'enhancing' ? 'opacity-0 invisible' : 'opacity-100'}`}>
+                {videoUrl && !hasError ? (
+                    <div className="relative w-full h-full">
+                        <video 
+                            key={videoUrl}
+                            src={videoUrl} 
+                            className="w-full h-auto max-h-[380px] object-contain block transition-all duration-500" 
+                            controls 
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            onError={() => setHasError(true)}
+                        />
+                        {/* Hover Overlay for direct link */}
+                        <div className={`absolute top-2 right-2 flex gap-2 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+                            <a 
+                                href={videoUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-lg backdrop-blur-md transition-all border border-white/10"
+                                title="Open original video"
+                            >
+                                <Video size={14} />
+                            </a>
+                        </div>
+                    </div>
+                ) : videoUrl && hasError ? (
+                    <div className={`flex flex-col items-center justify-center w-full px-8 text-center bg-gradient-to-b ${dark ? 'from-amber-500/5 to-transparent' : 'from-amber-500/[0.03] to-transparent'} ${aspectClass}`}>
+                        <div className="relative mb-4">
+                            <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-full"></div>
+                            <div className={`relative p-4 rounded-2xl border ${dark ? 'bg-[#121212] border-white/5' : 'bg-white border-black/5'} shadow-xl`}>
+                                <Video size={32} className="text-amber-500" />
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-1 mb-5">
+                            <h4 className={`text-xs font-black uppercase tracking-widest ${dark ? 'text-white' : 'text-slate-900'}`}>Video Generated</h4>
+                            <p className={`text-[10px] font-medium leading-relaxed max-w-[200px] ${dark ? 'text-white/40' : 'text-slate-400'}`}>
+                                This video is too heavy for in-browser preview. You can view the original file directly.
+                            </p>
+                        </div>
+
+                        <a 
+                            href={videoUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="btn btn-xs h-9 px-5 rounded-xl btn-primary border-none font-bold gap-2 shadow-lg shadow-primary/20"
+                        >
+                            <Video size={14} />
+                            View Full Video
+                        </a>
+                    </div>
+                ) : (
+                    <div className={`flex items-center justify-center w-full ${aspectClass}`}>
+                        <Video size={36} strokeWidth={1} className={dark ? 'text-white/10' : 'text-black/10'} />
+                    </div>
+                )}
+            </div>
+
+            {modeBadge && !hasError && (
+                <span className={`absolute top-2 left-2 text-[10px] font-black px-1.5 py-0.5 rounded-md transition-opacity duration-300 backdrop-blur-md ${dark ? 'bg-black/50 text-white/40 border border-white/5' : 'bg-white/80 text-slate-500 border border-black/5'} ${loadingStatus === 'generating' || loadingStatus === 'enhancing' ? 'opacity-0 invisible' : 'opacity-100'}`}>
+                    {modeBadge}
+                </span>
+            )}
+
+            <AILoadingOverlay
+                type="video"
+                status={loadingStatus}
+                message={loadingMessage}
+                progress={loadingProgress}
+                onClear={clearStatus}
+            />
         </div>
-        {modeBadge && (
-            <span className={`absolute top-2 left-2 text-[10px] font-black px-1.5 py-0.5 rounded-md transition-opacity duration-300 ${dark ? 'bg-black/50 text-white/40' : 'bg-white/80 text-slate-500'} ${loadingStatus === 'generating' || loadingStatus === 'enhancing' ? 'opacity-0 invisible' : 'opacity-100'}`}>
-                {modeBadge}
-            </span>
-        )}
-        <AILoadingOverlay
-            type="video"
-            status={loadingStatus}
-            message={loadingMessage}
-            progress={loadingProgress}
-            onClear={clearStatus}
-        />
-    </div>
-);
+    );
+};
 
 /**
  * Shared Enhance prompt button.
