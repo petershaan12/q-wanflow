@@ -43,8 +43,8 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
 
     // Sync connected media
     useEffect(() => {
-        const { images, videos } = getLinkedMediaUrls(id, 'ref-media', getEdges, getNodes);
-        const allRefs = [...videos, ...images].slice(0, 5); // DashScope limit: sum <= 5
+        const { ordered } = getLinkedMediaUrls(id, 'ref-media', getEdges, getNodes);
+        const allRefs = (ordered || []).slice(0, 5); // DashScope limit: sum <= 5
 
         if (JSON.stringify(allRefs) !== JSON.stringify(referenceUrls)) {
             setReferenceUrls(allRefs);
@@ -54,6 +54,8 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
 
     const connectedPromptsCount = getEdges().filter(e => e.target === id && e.targetHandle === 'text-prompt').length;
     const hasRefs = referenceUrls && referenceUrls.length > 0;
+
+    console.log("Refrence", referenceUrls);
 
     const onGenerate = () => {
         if (!hasRefs) { showToast?.('error', 'Please connect at least one Reference video or image'); return; }
@@ -119,8 +121,7 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
                     </div>
                     <ConnectionBadge
                         count={connectedPromptsCount}
-                        imageLinked={referenceUrls.filter(u => u.match(/\.(jpeg|jpg|png|bmp)/i)).length}
-                        videoLinked={referenceUrls.filter(u => u.match(/\.(mp4)/i)).length}
+                        mediaUrls={referenceUrls}
                     />
                 </ControlsRow>
             </NodeBase>

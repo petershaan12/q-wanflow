@@ -47,9 +47,9 @@ export const getLinkedText = (id, handleId, getEdges, getNodes) => {
  */
 export const getLinkedMediaUrls = (id, handleId, getEdges, getNodes) => {
     const connectedEdges = getEdges().filter(e => e.target === id && e.targetHandle === handleId);
-    if (!connectedEdges.length) return { images: [], videos: [] };
+    if (!connectedEdges.length) return { images: [], videos: [], ordered: [] };
 
-    const results = { images: [], videos: [] };
+    const results = { images: [], videos: [], ordered: [] };
 
     connectedEdges.forEach(edge => {
         const sourceNode = getNodes().find(n => n.id === edge.source);
@@ -60,10 +60,16 @@ export const getLinkedMediaUrls = (id, handleId, getEdges, getNodes) => {
         // Helper to push to results based on URL format or assetType
         const addUrl = (url, typeHint) => {
             if (!url || typeof url !== 'string') return;
-            if (typeHint === 'image' || url.match(/\.(jpeg|jpg|png|bmp)/i)) {
+            const isImage = typeHint === 'image' || url.match(/\.(jpeg|jpg|png|bmp)/i);
+            const isVideo = typeHint === 'video' || url.match(/\.(mp4)/i);
+            if (isImage) {
                 results.images.push(url);
-            } else if (typeHint === 'video' || url.match(/\.(mp4)/i)) {
+                results.ordered.push(url);
+            } else if (isVideo) {
                 results.videos.push(url);
+                results.ordered.push(url);
+            } else {
+                results.ordered.push(url);
             }
         };
 
@@ -281,7 +287,7 @@ export const ControlsRow = ({ dark, children, generating, onGenerate, onCancel, 
 /**
  * Badge shown when external prompts or audio are connected.
  */
-export const ConnectionBadge = ({ count, audioLinked, imageLinked, videoLinked }) => {
+export const ConnectionBadge = ({ count, audioLinked, imageLinked, videoLinked, mediaUrls }) => {
     const imgCount = typeof imageLinked === 'number' ? imageLinked : (imageLinked ? 1 : 0);
     const vidCount = typeof videoLinked === 'number' ? videoLinked : (videoLinked ? 1 : 0);
     
@@ -295,22 +301,43 @@ export const ConnectionBadge = ({ count, audioLinked, imageLinked, videoLinked }
                     </span>
                 </div>
             )}
-            {imgCount > 0 && (
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-500/5 border border-indigo-500/10 animate-fade-in w-fit">
-                    <Image size={10} className="text-indigo-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-indigo-500/70 uppercase tracking-tight">
-                        {imgCount > 1 ? `${imgCount} ` : ''}Img
-                    </span>
-                </div>
+            
+            {mediaUrls && mediaUrls.length > 0 ? (
+                mediaUrls.map((url, i) => {
+                    const isImg = url.match(/\.(jpeg|jpg|png|bmp)/i);
+                    const isVid = url.match(/\.(mp4)/i);
+                    if (!isImg && !isVid) return null;
+                    const icon = isImg ? <Image size={10} className="text-indigo-500 animate-pulse" /> : <Video size={10} className="text-amber-500 animate-pulse" />;
+                    return (
+                        <div key={i} className={`flex items-center gap-1 px-1.5 py-1 rounded-md border animate-fade-in w-fit ${isImg ? 'bg-indigo-500/5 border-indigo-500/10' : 'bg-amber-500/5 border-amber-500/10'}`}>
+                            {icon}
+                            <span className={`text-[9px] font-bold uppercase tracking-tight ${isImg ? 'text-indigo-500/70' : 'text-amber-500/70'}`}>
+                                Ref {i + 1}
+                            </span>
+                        </div>
+                    );
+                })
+            ) : (
+                <>
+                    {imgCount > 0 && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-500/5 border border-indigo-500/10 animate-fade-in w-fit">
+                            <Image size={10} className="text-indigo-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-indigo-500/70 uppercase tracking-tight">
+                                {imgCount > 1 ? `${imgCount} ` : ''}Img
+                            </span>
+                        </div>
+                    )}
+                    {vidCount > 0 && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/5 border border-amber-500/10 animate-fade-in w-fit">
+                            <Video size={10} className="text-amber-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-amber-500/70 uppercase tracking-tight">
+                                {vidCount > 1 ? `${vidCount} ` : ''}Vid
+                            </span>
+                        </div>
+                    )}
+                </>
             )}
-            {vidCount > 0 && (
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/5 border border-amber-500/10 animate-fade-in w-fit">
-                    <Video size={10} className="text-amber-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-amber-500/70 uppercase tracking-tight">
-                        {vidCount > 1 ? `${vidCount} ` : ''}Vid
-                    </span>
-                </div>
-            )}
+            
             {audioLinked && (
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-green-500/5 border border-green-500/10 animate-fade-in w-fit">
                     <Volume2 size={10} className="text-green-500 animate-pulse" />
