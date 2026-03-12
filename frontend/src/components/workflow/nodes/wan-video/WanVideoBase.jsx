@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Video, Sparkles, Volume2, Image } from 'lucide-react';
 import { GenerateButton } from '../NodePrimitives';
 import aiService from '../../../../services/aiService';
+import { workflowService } from '../../../../services/workflowService';
 import AILoadingOverlay from '../AILoadingOverlay';
 
 export const mergePromptParts = (...parts) => {
@@ -177,11 +178,11 @@ export const VideoPreview = ({ videoUrl, modeBadge, aspectClass, loadingStatus, 
                             src={videoUrl} 
                             className="w-full h-auto max-h-[380px] object-contain block transition-all duration-500" 
                             controls 
-                            autoPlay
-                            muted
-                            loop
                             playsInline
-                            onError={() => setHasError(true)}
+                            onError={(e) => {
+                                // Only trigger error if the source is actually set and failing
+                                if (videoUrl) setHasError(true);
+                            }}
                         />
                         {/* Hover Overlay for direct link */}
                         <div className={`absolute top-2 right-2 flex gap-2 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
@@ -331,8 +332,29 @@ export const useVideoGeneration = ({ id, data, showToast, setNodes }) => {
     const [generating, setGenerating] = useState(false);
     const abortControllerRef = useRef(null);
 
-    const upd = (k, v) =>
-        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, [k]: v } } : n));
+    const upd = (k, v) => {
+        setNodes(nds => {
+            const nextNodes = nds.map(n => {
+                if (n.id === id) {
+                    const newData = { ...n.data, [k]: v };
+                    
+                    // If this is a persistent node (UUID-like ID), sync to backend immediately
+                    if (id.includes('-')) {
+                        workflowService.updateNode(id, {
+                            type: n.type,
+                            position_x: Math.round(n.position?.x ?? 0),
+                            position_y: Math.round(n.position?.y ?? 0),
+                            config: newData
+                        }).catch(err => console.error('Error syncing node to backend:', err));
+                    }
+                    
+                    return { ...n, data: newData };
+                }
+                return n;
+            });
+            return nextNodes;
+        });
+    };
 
     const handleCancel = () => {
         if (abortControllerRef.current) {
