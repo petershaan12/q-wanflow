@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Video, Sparkles, Volume2, Image } from 'lucide-react';
 import { GenerateButton } from '../NodePrimitives';
 import aiService from '../../../../services/aiService';
@@ -349,7 +349,7 @@ export const ConnectionBadge = ({ count, audioLinked, imageLinked, videoLinked, 
 };
 
 /**
- * useVideoGeneration — shared loading state + generate/enhance logic.
+ * useVideoGeneration — shared loading state + generate/enhance logic with task persistence.
  */
 export const useVideoGeneration = ({ id, data, showToast, setNodes }) => {
     const [loadingStatus, setLoadingStatus] = useState('initial');
@@ -358,13 +358,14 @@ export const useVideoGeneration = ({ id, data, showToast, setNodes }) => {
     const [enhancing, setEnhancing] = useState(false);
     const [generating, setGenerating] = useState(false);
     const abortControllerRef = useRef(null);
+    const isRecoveringRef = useRef(false);
 
-    const upd = (k, v) => {
+    const upd = useCallback((k, v) => {
         setNodes(nds => {
             const nextNodes = nds.map(n => {
                 if (n.id === id) {
                     const newData = { ...n.data, [k]: v };
-                    
+
                     // If this is a persistent node (UUID-like ID), sync to backend immediately
                     if (id.includes('-')) {
                         workflowService.updateNode(id, {
@@ -374,20 +375,78 @@ export const useVideoGeneration = ({ id, data, showToast, setNodes }) => {
                             config: newData
                         }).catch(err => console.error('Error syncing node to backend:', err));
                     }
-                    
+
                     return { ...n, data: newData };
                 }
                 return n;
             });
             return nextNodes;
         });
-    };
+    }, [id, setNodes]);
+
+    // Recovery: Poll a pending task until completion
+    const pollPendingTask = useCallback(async (taskId) => {
+        if (!taskId || isRecoveringRef.current) return;
+        isRecoveringRef.current = true;
+        setGenerating(true);
+        setLoadingStatus('generating');
+        setLoadingMessage('Recovering video generation...');
+        setLoadingProgress(30);
+
+        abortControllerRef.current = new AbortController();
+
+        try {
+            const result = await aiService.pollTaskUntilDone(taskId, {
+                onProgress: (r) => {
+                    const status = (r.status || '').toUpperCase();
+                    if (status === 'PROCESSING' || status === 'PENDING') {
+                        setLoadingMessage(`Generating video... (${status})`);
+                        setLoadingProgress(50);
+                    }
+                },
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (result.video_url) {
+                upd('videoUrl', result.video_url);
+                upd('pendingTaskId', null); // Clear pending task
+                setLoadingStatus('success');
+                setLoadingMessage('Video generated successfully!');
+                setLoadingProgress(100);
+                showToast?.('success', 'Video generated successfully!');
+                setTimeout(() => setLoadingStatus('initial'), 3000);
+            } else {
+                throw new Error('No video URL in completed task');
+            }
+        } catch (err) {
+            if (err.isCanceled) {
+                upd('pendingTaskId', null);
+                return;
+            }
+            setLoadingStatus('error');
+            setLoadingMessage(err.message || 'Failed to recover generation.');
+            showToast?.('error', err.message || 'Failed to recover generation.');
+            upd('pendingTaskId', null);
+        } finally {
+            abortControllerRef.current = null;
+            setGenerating(false);
+            isRecoveringRef.current = false;
+        }
+    }, [upd, showToast]);
+
+    // Check for pending task on mount
+    useEffect(() => {
+        if (data.pendingTaskId && !generating && !isRecoveringRef.current) {
+            pollPendingTask(data.pendingTaskId);
+        }
+    }, [data.pendingTaskId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleCancel = () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
         }
+        upd('pendingTaskId', null); // Clear pending task on cancel
         setGenerating(false);
         setLoadingStatus('initial');
         setLoadingMessage('');
@@ -426,26 +485,66 @@ export const useVideoGeneration = ({ id, data, showToast, setNodes }) => {
         setLoadingStatus('generating');
         setLoadingMessage('Starting video generation...');
         setLoadingProgress(10);
+
+        abortControllerRef.current = new AbortController();
+
         try {
             setLoadingMessage('Connecting to Wan API...');
             setLoadingProgress(20);
-            abortControllerRef.current = new AbortController();
-            const result = await aiService.generateVideo(payload, { signal: abortControllerRef.current.signal });
-            setLoadingMessage('Finalizing video...');
-            setLoadingProgress(90);
-            if (result.video_url) {
-                upd('videoUrl', result.video_url);
+            const initResult = await aiService.generateVideo(payload, { signal: abortControllerRef.current.signal });
+
+            // If sync response (already has video_url), complete immediately
+            if (initResult.video_url) {
+                upd('videoUrl', initResult.video_url);
+                upd('pendingTaskId', null);
                 setLoadingStatus('success');
                 setLoadingMessage('Video generated successfully!');
                 setLoadingProgress(100);
                 showToast?.('success', 'Video generated successfully!');
                 setTimeout(() => setLoadingStatus('initial'), 3000);
+                return;
+            }
+
+            // Async response - persist task_id and start polling
+            if (initResult.task_id) {
+                upd('pendingTaskId', initResult.task_id); // Persist for recovery
+                setLoadingMessage('Video generation in progress...');
+                setLoadingProgress(30);
+
+                const finalResult = await aiService.pollTaskUntilDone(initResult.task_id, {
+                    onProgress: (r) => {
+                        const status = (r.status || '').toUpperCase();
+                        if (status === 'PROCESSING' || status === 'PENDING') {
+                            setLoadingMessage(`Generating video... (${status})`);
+                            setLoadingProgress(50);
+                        }
+                    },
+                    signal: abortControllerRef.current.signal,
+                });
+
+                if (finalResult.video_url) {
+                    upd('videoUrl', finalResult.video_url);
+                    upd('pendingTaskId', null); // Clear pending task
+                    setLoadingStatus('success');
+                    setLoadingMessage('Video generated successfully!');
+                    setLoadingProgress(100);
+                    showToast?.('success', 'Video generated successfully!');
+                    setTimeout(() => setLoadingStatus('initial'), 3000);
+                } else {
+                    throw new Error('No video URL in completed task');
+                }
+            } else {
+                throw new Error('No task_id or video_url in response');
             }
         } catch (err) {
-            if (err.isCanceled) return;
+            if (err.isCanceled) {
+                upd('pendingTaskId', null);
+                return;
+            }
             setLoadingStatus('error');
             setLoadingMessage(err.message || 'Failed to generate video.');
             showToast?.('error', err.message || 'Failed to generate video.');
+            upd('pendingTaskId', null);
         } finally {
             abortControllerRef.current = null;
             setGenerating(false);

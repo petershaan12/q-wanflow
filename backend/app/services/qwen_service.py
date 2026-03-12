@@ -25,7 +25,17 @@ from app.services.wan import (  # noqa: F401
     generate_ifi,
     generate_t2i,
     generate_edit,
+    get_task_status as _get_task_status,
 )
+
+
+def check_task_status(user_id: str, task_id: str, db) -> dict:
+    """
+    Check status of a DashScope async task.
+    Returns task_id, status, and media URLs if completed.
+    """
+    api_key = _require_key(user_id, db)
+    return _get_task_status(api_key, task_id)
 
 
 def text_generation(user_id: str, prompt: str, model: str,

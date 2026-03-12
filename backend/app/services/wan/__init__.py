@@ -19,6 +19,7 @@ from .qwen_core import (
     _is_async_not_supported_error,
     make_async_headers,
     make_headers,
+    get_task_status,
 )
 from .image_t2i_service import generate_t2i
 from .image_edit_service import generate_edit
@@ -51,6 +52,7 @@ __all__ = [
     "_is_async_not_supported_error",
     "make_async_headers",
     "make_headers",
+    "get_task_status",
     "generate_t2i",
     "generate_edit",
     "tts_generation",

@@ -22,6 +22,30 @@ def save_api_key(
     return {"message": "API key saved"}
 
 
+@router.get("/task-status/{task_id}")
+def get_task_status(
+    task_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Check the status of a DashScope async task.
+    Returns task_id, status (PENDING, PROCESSING, SUCCEEDED, FAILED),
+    and media URLs if the task is completed.
+    """
+    try:
+        result = qwen_service.check_task_status(
+            user_id=current_user.id,
+            task_id=task_id,
+            db=db
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/api-key/status")
 def api_key_status(
     db: Session = Depends(get_db),

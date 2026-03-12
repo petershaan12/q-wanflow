@@ -65,21 +65,38 @@ def generate_edit(
     headers = make_async_headers(api_key)
     endpoint = f"{DASHSCOPE_INTL_BASE}/api/v1/services/aigc/multimodal-generation/generation"
 
+    is_sync = False
     try:
         start_data = _post_json(endpoint, headers=headers, payload=payload, timeout=60)
     except HTTPException as exc:
         if exc.status_code in {400, 403} and _is_async_not_supported_error(exc.detail):
+            # Fallback to sync mode
+            is_sync = True
             start_data = _post_json(endpoint, headers=make_headers(api_key), payload=payload, timeout=60)
         else:
             raise
 
     task_id = _extract_task_id(start_data)
-    final_data = _poll_task_until_done(api_key, task_id) if task_id else start_data
 
-    image_url = _extract_media_url(final_data, "image")
-    if not image_url:
-        err_msg = f"Edit: Image URL not found: {final_data}"
-        logger.error(err_msg)
-        raise HTTPException(status_code=502, detail=err_msg)
+    # For sync responses or if no task_id (direct response), return immediately with result
+    if is_sync or not task_id:
+        image_url = _extract_media_url(start_data, "image")
+        if not image_url:
+            err_msg = f"Edit: Image URL not found in sync response: {start_data}"
+            logger.error(err_msg)
+            raise HTTPException(status_code=502, detail=err_msg)
+        return {
+            "image_url": image_url,
+            "task_id": task_id,
+            "status": "SUCCEEDED",
+            "raw_response": start_data
+        }
 
-    return {"image_url": image_url, "task_id": task_id, "raw_response": final_data}
+    # For async responses, return task_id immediately (frontend will poll)
+    logger.info(f"Edit async task started: {task_id}")
+    return {
+        "image_url": None,
+        "task_id": task_id,
+        "status": "PENDING",
+        "raw_response": start_data
+    }

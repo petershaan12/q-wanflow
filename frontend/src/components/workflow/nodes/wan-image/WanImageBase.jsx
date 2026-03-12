@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Image as ImageIcon, Sparkles, Plus, Trash2 } from 'lucide-react';
 import useThemeStore from '../../../../stores/themeStore';
 import aiService from '../../../../services/aiService';
@@ -138,7 +138,7 @@ export const NegativePromptArea = ({ negativePrompt, setNegativePrompt, upd, dar
 );
 
 /**
- * Hook for Image Generation Logic.
+ * Hook for Image Generation Logic with task persistence and recovery.
  */
 export const useImageGeneration = ({ id, data, showToast, setNodes }) => {
     const [loadingStatus, setLoadingStatus] = useState('initial');
@@ -147,15 +147,76 @@ export const useImageGeneration = ({ id, data, showToast, setNodes }) => {
     const [enhancing, setEnhancing] = useState(false);
     const [generating, setGenerating] = useState(false);
     const abortControllerRef = useRef(null);
+    const isRecoveringRef = useRef(false);
 
-    const upd = (k, v) =>
-        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, [k]: v } } : n));
+    const upd = useCallback((k, v) =>
+        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, [k]: v } } : n)),
+        [id, setNodes]
+    );
+
+    // Recovery: Poll a pending task until completion
+    const pollPendingTask = useCallback(async (taskId) => {
+        if (!taskId || isRecoveringRef.current) return;
+        isRecoveringRef.current = true;
+        setGenerating(true);
+        setLoadingStatus('generating');
+        setLoadingMessage('Recovering generation task...');
+        setLoadingProgress(30);
+
+        abortControllerRef.current = new AbortController();
+
+        try {
+            const result = await aiService.pollTaskUntilDone(taskId, {
+                onProgress: (r) => {
+                    const status = (r.status || '').toUpperCase();
+                    if (status === 'PROCESSING' || status === 'PENDING') {
+                        setLoadingMessage(`Generating image... (${status})`);
+                        setLoadingProgress(50);
+                    }
+                },
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (result.image_url) {
+                upd('imageUrl', result.image_url);
+                upd('pendingTaskId', null); // Clear pending task
+                setLoadingStatus('success');
+                setLoadingMessage('Image generated successfully!');
+                setLoadingProgress(100);
+                showToast?.('success', 'Image generated successfully!');
+                setTimeout(() => setLoadingStatus('initial'), 3000);
+            } else {
+                throw new Error('No image URL in completed task');
+            }
+        } catch (err) {
+            if (err.isCanceled) {
+                upd('pendingTaskId', null);
+                return;
+            }
+            setLoadingStatus('error');
+            setLoadingMessage(err.message || 'Failed to recover generation.');
+            showToast?.('error', err.message || 'Failed to recover generation.');
+            upd('pendingTaskId', null);
+        } finally {
+            abortControllerRef.current = null;
+            setGenerating(false);
+            isRecoveringRef.current = false;
+        }
+    }, [upd, showToast]);
+
+    // Check for pending task on mount
+    useEffect(() => {
+        if (data.pendingTaskId && !generating && !isRecoveringRef.current) {
+            pollPendingTask(data.pendingTaskId);
+        }
+    }, [data.pendingTaskId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleCancel = () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
         }
+        upd('pendingTaskId', null); // Clear pending task on cancel
         setGenerating(false);
         setLoadingStatus('initial');
         setLoadingMessage('');
@@ -194,26 +255,66 @@ export const useImageGeneration = ({ id, data, showToast, setNodes }) => {
         setLoadingStatus('generating');
         setLoadingMessage('Starting image generation...');
         setLoadingProgress(10);
+
+        abortControllerRef.current = new AbortController();
+
         try {
             setLoadingMessage('Connecting to Wan API...');
             setLoadingProgress(20);
-            abortControllerRef.current = new AbortController();
-            const result = await aiService.generateImage(payload, { signal: abortControllerRef.current.signal });
-            setLoadingMessage('Finalizing image...');
-            setLoadingProgress(90);
-            if (result.image_url) {
-                upd('imageUrl', result.image_url);
+            const initResult = await aiService.generateImage(payload, { signal: abortControllerRef.current.signal });
+
+            // If sync response (already has image_url), complete immediately
+            if (initResult.image_url) {
+                upd('imageUrl', initResult.image_url);
+                upd('pendingTaskId', null);
                 setLoadingStatus('success');
                 setLoadingMessage('Image generated successfully!');
                 setLoadingProgress(100);
                 showToast?.('success', 'Image generated successfully!');
                 setTimeout(() => setLoadingStatus('initial'), 3000);
+                return;
+            }
+
+            // Async response - persist task_id and start polling
+            if (initResult.task_id) {
+                upd('pendingTaskId', initResult.task_id); // Persist for recovery
+                setLoadingMessage('Image generation in progress...');
+                setLoadingProgress(30);
+
+                const finalResult = await aiService.pollTaskUntilDone(initResult.task_id, {
+                    onProgress: (r) => {
+                        const status = (r.status || '').toUpperCase();
+                        if (status === 'PROCESSING' || status === 'PENDING') {
+                            setLoadingMessage(`Generating image... (${status})`);
+                            setLoadingProgress(50);
+                        }
+                    },
+                    signal: abortControllerRef.current.signal,
+                });
+
+                if (finalResult.image_url) {
+                    upd('imageUrl', finalResult.image_url);
+                    upd('pendingTaskId', null); // Clear pending task
+                    setLoadingStatus('success');
+                    setLoadingMessage('Image generated successfully!');
+                    setLoadingProgress(100);
+                    showToast?.('success', 'Image generated successfully!');
+                    setTimeout(() => setLoadingStatus('initial'), 3000);
+                } else {
+                    throw new Error('No image URL in completed task');
+                }
+            } else {
+                throw new Error('No task_id or image_url in response');
             }
         } catch (err) {
-            if (err.isCanceled) return;
+            if (err.isCanceled) {
+                upd('pendingTaskId', null);
+                return;
+            }
             setLoadingStatus('error');
             setLoadingMessage(err.message || 'Failed to generate image.');
             showToast?.('error', err.message || 'Failed to generate image.');
+            upd('pendingTaskId', null);
         } finally {
             abortControllerRef.current = null;
             setGenerating(false);

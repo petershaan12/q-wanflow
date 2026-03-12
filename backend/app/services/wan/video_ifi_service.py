@@ -89,12 +89,21 @@ def generate_ifi(
     )
     task_id = _extract_task_id(start_data)
     logger.info(f"IFI task created: {task_id}")
-    final_data = _poll_task_until_done(api_key, task_id) if task_id else start_data
 
-    video_url = _extract_media_url(final_data, "video")
+    # For async responses, return task_id immediately (frontend will poll)
+    if task_id:
+        return {
+            "video_url": None,
+            "task_id": task_id,
+            "status": "PENDING",
+            "raw_response": start_data
+        }
+
+    # For sync responses (no task_id), extract video_url directly
+    video_url = _extract_media_url(start_data, "video")
     if not video_url:
-        err_msg = f"IFI: video URL not found in response: {final_data}"
+        err_msg = f"IFI: video URL not found in response: {start_data}"
         logger.error(err_msg)
         raise HTTPException(status_code=502, detail=err_msg)
-    logger.info("IFI generation successful")
-    return {"video_url": video_url, "task_id": task_id, "raw_response": final_data}
+    logger.info("IFI generation successful (sync)")
+    return {"video_url": video_url, "task_id": None, "status": "SUCCEEDED", "raw_response": start_data}

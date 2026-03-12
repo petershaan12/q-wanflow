@@ -301,3 +301,36 @@ def make_headers(api_key: str) -> dict:
     }
 
 
+# ── Task Status Check (Non-blocking) ──────────────────────────────────────────
+
+def get_task_status(api_key: str, task_id: str) -> dict:
+    """
+    Get current status of a DashScope async task without blocking.
+    Returns status and result URL if completed.
+    """
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    url = f"{DASHSCOPE_INTL_BASE}/api/v1/tasks/{task_id}"
+    data = _get_json(url, headers=headers, timeout=30)
+
+    task_status = (
+        data.get("output", {}).get("task_status")
+        or data.get("task_status")
+        or ""
+    )
+    status_upper = str(task_status).upper()
+
+    # Extract URLs if task is completed
+    image_url = _extract_media_url(data, "image") if status_upper in {"SUCCEEDED", "SUCCESS", "COMPLETED"} else None
+    video_url = _extract_media_url(data, "video") if status_upper in {"SUCCEEDED", "SUCCESS", "COMPLETED"} else None
+    audio_url = _extract_media_url(data, "audio") if status_upper in {"SUCCEEDED", "SUCCESS", "COMPLETED"} else None
+
+    return {
+        "task_id": task_id,
+        "status": status_upper,
+        "image_url": image_url,
+        "video_url": video_url,
+        "audio_url": audio_url,
+        "raw_response": data,
+    }
+
+
