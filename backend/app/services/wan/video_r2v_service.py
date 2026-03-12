@@ -77,7 +77,8 @@ def generate_r2v(
     }
 
     payload = {"model": model, "input": input_data, "parameters": parameters}
-    logger.debug(f"R2V payload: {json.dumps(payload, indent=2)}")
+    # Log payload at INFO level for production visibility
+    logger.info(f"R2V Request Payload: {json.dumps(payload)}")
 
     headers = make_async_headers(api_key)
     start_data = _post_json(
@@ -90,6 +91,8 @@ def generate_r2v(
 
     video_url = _extract_media_url(final_data, "video")
     if not video_url:
-        raise HTTPException(status_code=502, detail=f"R2V: video URL not found in response: {final_data}")
+        err_msg = f"R2V: video URL not found in response: {final_data}"
+        logger.error(err_msg)
+        raise HTTPException(status_code=502, detail=err_msg)
     logger.info("R2V generation successful")
     return {"video_url": video_url, "task_id": task_id, "raw_response": final_data}

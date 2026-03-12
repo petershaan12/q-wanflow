@@ -35,7 +35,7 @@ def tts_generation(user_id: str, prompt: str, voice: str, model: str, db: Sessio
     headers = make_headers(api_key)
 
     try:
-        logger.debug(f"TTS request | voice={voice}")
+        logger.info(f"TTS Request Payload: {json.dumps(payload)}")
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
 
         ct = resp.headers.get("Content-Type", "").lower()
@@ -67,7 +67,9 @@ def tts_generation(user_id: str, prompt: str, voice: str, model: str, db: Sessio
         if audio_url and not audio_url.startswith("http") and not audio_url.startswith("data:"):
             audio_url = f"data:audio/mpeg;base64,{audio_url}"
         if not audio_url:
-            raise HTTPException(status_code=502, detail=f"TTS: no audio in response: {json.dumps(data)}")
+            err_msg = f"TTS: no audio in response: {json.dumps(data)}"
+            logger.error(err_msg)
+            raise HTTPException(status_code=502, detail=err_msg)
 
         return {"audio_url": audio_url, "raw_response": data}
 

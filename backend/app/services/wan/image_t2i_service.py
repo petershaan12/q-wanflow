@@ -53,7 +53,7 @@ def generate_t2i(
         "parameters": parameters,
     }
     
-    logger.debug(f"T2I payload: {json.dumps(payload, indent=2)}")
+    logger.info(f"T2I Request Payload: {json.dumps(payload)}")
 
     headers = make_async_headers(api_key)
     endpoint = f"{DASHSCOPE_INTL_BASE}/api/v1/services/aigc/multimodal-generation/generation"
@@ -71,7 +71,9 @@ def generate_t2i(
 
     image_url = _extract_media_url(final_data, "image")
     if not image_url:
-        raise HTTPException(status_code=502, detail=f"T2I: Image URL not found: {final_data}")
+        err_msg = f"T2I: Image URL not found: {final_data}"
+        logger.error(err_msg)
+        raise HTTPException(status_code=502, detail=err_msg)
 
     result = {"image_url": image_url, "task_id": task_id, "raw_response": final_data}
     

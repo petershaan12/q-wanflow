@@ -61,7 +61,7 @@ def generate_edit(
         "parameters": parameters,
     }
     
-    logger.debug(f"Edit payload: {json.dumps(payload, indent=2)}")
+    logger.info(f"Edit Request Payload: {json.dumps(payload)}")
     headers = make_async_headers(api_key)
     endpoint = f"{DASHSCOPE_INTL_BASE}/api/v1/services/aigc/multimodal-generation/generation"
 
@@ -78,6 +78,8 @@ def generate_edit(
 
     image_url = _extract_media_url(final_data, "image")
     if not image_url:
-        raise HTTPException(status_code=502, detail=f"Edit: Image URL not found: {final_data}")
+        err_msg = f"Edit: Image URL not found: {final_data}"
+        logger.error(err_msg)
+        raise HTTPException(status_code=502, detail=err_msg)
 
     return {"image_url": image_url, "task_id": task_id, "raw_response": final_data}

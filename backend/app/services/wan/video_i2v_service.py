@@ -75,8 +75,7 @@ def generate_i2v(
         input_data["audio_url"] = audio_url
 
     payload = {"model": model, "input": input_data, "parameters": parameters}
-    
-    logger.debug(f"I2V payload: {json.dumps(payload, indent=2)}")
+    logger.info(f"I2V Request Payload: {json.dumps(payload)}")
 
     headers = make_async_headers(api_key)
     start_data = _post_json(
@@ -89,7 +88,9 @@ def generate_i2v(
 
     video_url = _extract_media_url(final_data, "video")
     if not video_url:
-        raise HTTPException(status_code=502, detail=f"I2V: video URL not found in response: {final_data}")
+        err_msg = f"I2V: video URL not found in response: {final_data}"
+        logger.error(err_msg)
+        raise HTTPException(status_code=502, detail=err_msg)
     
     result = {"video_url": video_url, "task_id": task_id, "raw_response": final_data}
     
