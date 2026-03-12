@@ -69,11 +69,7 @@ const WanVideoI2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
     const modelOpts = MODELS.map(v => ({ label: v.replace('wan2.6-i2v', 'i2v').replace('wan2.5-', '(2.5) ').replace('-preview', '').replace('-flash', ' Flash'), value: v }));
     const shotOpts = [
         { label: 'Single', value: 'single' },
-        { label: 'Long Shot', value: 'long shot' },
-        { label: 'Medium Shot', value: 'medium shot' },
-        { label: 'Close Up', value: 'close-up' },
-        { label: 'Pan', value: 'pan' },
-        { label: 'Tilt', value: 'tilt' },
+        { label: 'Multiple', value: 'multi' },
     ];
 
     return (
