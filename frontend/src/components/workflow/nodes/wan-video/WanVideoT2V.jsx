@@ -32,6 +32,7 @@ const WanVideoT2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
     const [duration, setDuration] = useState(data.duration || '5s');
     const [shotType, setShotType] = useState(data.shotType || 'single');
     const [audio, setAudio] = useState(data.audio !== undefined ? data.audio : true);
+    const [model, setModel] = useState(data.model || 'wan2.6-t2v');
     const [referenceAudioUrl, setReferenceAudioUrl] = useState(data.referenceAudioUrl || '');
     const [useNeg, setUseNeg] = useState(data.useNegativePrompt !== undefined ? data.useNegativePrompt : false);
 

@@ -18,7 +18,8 @@ import {
     WanImageT2I, WanImageEdit,
     WanVideoT2V, WanVideoI2V, WanVideoR2V, WanVideoIFI,
     TextToSpeechNode,
-    CommentNode
+    CommentNode,
+    NoteNode
 } from '../components/workflow/nodes';
 import ShareModal from '../components/workflow/ShareModal';
 
@@ -87,7 +88,8 @@ const InnerWorkflowEditor = () => {
         wan_video_r2v: (props) => <WanVideoR2V        {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
         wan_video_ifi: (props) => <WanVideoIFI        {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
         text_to_speech: (props) => <TextToSpeechNode   {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        comment: (props) => <CommentNode         {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} onSaveNode={updateNodeConfig} />,
+        comment: (props) => <CommentNode         {...props} canEdit={canEdit} showToast={showToast} onSaveNode={updateNodeConfig} />,
+        note: (props) => <NoteNode            {...props} canEdit={canEdit} onSaveNode={updateNodeConfig} onDeleteNode={deleteNode} />,
     }), [showToast, deleteNode, updateNodeConfig, canEdit]);
 
     const onMoveEnd = useCallback((event, viewport) => {

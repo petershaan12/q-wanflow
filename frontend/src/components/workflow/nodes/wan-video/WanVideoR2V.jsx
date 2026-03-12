@@ -61,6 +61,8 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
 
     const onGenerate = () => {
         if (!hasVideo) { showToast?.('error', 'Please connect a Reference Video first'); return; }
+        const linkedPrompt = getLinkedText(id, 'text-prompt', getEdges, getNodes);
+        const effectivePrompt = mergePromptParts(linkedPrompt, prompt);
         const effectiveNeg = useNeg ? (negativePrompt || undefined) : undefined;
         const size = SIZE_MAP[aspect]?.['720'] || '1280*720';
 

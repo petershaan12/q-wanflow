@@ -11,7 +11,7 @@ import useThemeStore from '../../../stores/themeStore';
  * - lock indicator
  * - NO overflow:hidden anywhere (dropdowns must escape freely)
  */
-const NodeBase = ({ id, data, selected, title, icon: Icon, children, minWidth = 320, minHeight = 200, onSaveNode, onDeleteNode, canEdit = true }) => {
+const NodeBase = ({ id, data, selected, title, icon: Icon, children, minWidth = 320, minHeight = 200, onSaveNode, onDeleteNode, canEdit = true, hideHeader = false, rounded = 'rounded-2xl' }) => {
     const { setNodes, getNode } = useReactFlow();
     const { darkMode } = useThemeStore();
     const [isEditing, setIsEditing] = useState(false);
@@ -71,73 +71,25 @@ const NodeBase = ({ id, data, selected, title, icon: Icon, children, minWidth = 
         }
     };
 
+    const baseClasses = `relative group transition-all duration-200 ${rounded} overflow-visible`;
+    const themeClasses = darkMode ? 'bg-[#0f0f12] border-white/10' : 'bg-white border-slate-200';
+    const borderClasses = 'border shadow-2xl';
+    const selectionClasses = selected ? 'ring-2 ring-primary border-primary/40' : '';
+    const lockedClasses = data?.isLocked ? 'opacity-70' : '';
+
     return (
         <div
-            style={{ 
+            style={{
                 width: data?.width || minWidth,
                 height: data?.height ? data.height : 'auto',
                 minHeight: minHeight,
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden'
             }}
-            className={`relative group rounded-2xl transition-all duration-200
-        ${darkMode ? 'bg-[#0f0f12] border-white/10' : 'bg-white border-slate-200'} border shadow-2xl
-        ${selected
-                    ? 'ring-2 ring-primary border-primary/40'
-                    : ''}
-        ${data?.isLocked ? 'opacity-70' : ''}
-      `}
+            className={`${baseClasses} ${themeClasses} ${borderClasses} ${selectionClasses} ${lockedClasses}`}
         >
-            <NodeResizer
-                isVisible={selected && !data?.isLocked && canEdit !== false}
-                minWidth={minWidth}
-                minHeight={minHeight}
-                onResize={(evt, params) => {
-                    setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, width: params.width, height: params.height } } : n));
-                }}
-                handleStyle={{
-                    width: 20,
-                    height: 20,
-                    background: 'transparent',
-                    border: 'none',
-                }}
-                lineStyle={{ borderColor: 'transparent' }}
-            />
-            <style>{`
-                .react-flow__node-resizer__handle { display: none !important; }
-                .react-flow__node-resizer__handle.bottom-right { 
-                    display: block !important; 
-                    right: 1px !important;
-                    bottom: 1px !important;
-                    width: 24px !important;
-                    height: 24px !important;
-                    cursor: nwse-resize !important;
-                    background: #6366f1 !important;
-                    /* Create an inset corner triangle that follows the node's curve */
-                    clip-path: polygon(100% 0%, 100% 100%, 0% 100%) !important;
-                    border-radius: 0 0 15px 0 !important;
-                    opacity: 0.15;
-                    transition: all 0.2s;
-                    z-index: 40 !important;
-                }
-                .react-flow__node-resizer__handle.bottom-right:hover {
-                    opacity: 0.8;
-                    background: #6366f1 !important;
-                }
-                .react-flow__node-resizer__handle.bottom-right::after {
-                    content: "";
-                    position: absolute;
-                    right: 3px;
-                    bottom: 3px;
-                    width: 10px;
-                    height: 10px;
-                    border-right: 2px solid white;
-                    border-bottom: 2px solid white;
-                    border-radius: 0 0 2px 0;
-                    opacity: 0.5;
-                }
-            `}</style>
+            {/* Inner background - prevents bleeding for standard nodes */}
+            <div className={`absolute inset-0 ${rounded} pointer-events-none z-[-1] ${darkMode ? 'bg-[#0f0f12]' : 'bg-white'}`} />
 
             {/* Lock badge */}
             {data?.isLocked && (
@@ -147,50 +99,129 @@ const NodeBase = ({ id, data, selected, title, icon: Icon, children, minWidth = 
             )}
 
             {/* Title row */}
-            <div className={`flex items-center justify-between gap-2 px-3 py-2.5 border-b flex-shrink-0 ${darkMode ? 'border-white/5' : 'border-slate-100'}`}>
-                <div className="flex items-center gap-2 min-w-0">
-                    {Icon && (
-                        <Icon size={13} className={darkMode ? 'text-white/30 flex-shrink-0' : 'text-black/30 flex-shrink-0'} />
-                    )}
-                    {isEditing ? (
-                        <input
-                            autoFocus
-                            value={tempLabel}
-                            onChange={e => setTempLabel(e.target.value)}
-                            onKeyDown={e => {
-                                e.stopPropagation();
-                                if (e.key === 'Enter') commitRename();
-                            }}
-                            onBlur={commitRename}
-                            className={`bg-transparent text-xs font-semibold border-b border-primary/40 focus:outline-none w-full
-                ${darkMode ? 'text-white' : 'text-slate-800'}`}
-                        />
-                    ) : (
-                        <span
-                            onDoubleClick={() => canEdit !== false && setIsEditing(true)}
-                            title="Double-click to rename"
-                            className={`text-xs font-semibold truncate cursor-text
-                ${darkMode ? 'text-white/50' : 'text-slate-500'}`}
+            {!hideHeader && (
+                <div className={`flex items-center justify-between gap-2 px-3 py-2.5 border-b flex-shrink-0 z-10 ${darkMode ? 'border-white/5' : 'border-slate-100'}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                        {Icon && (
+                            <Icon size={13} className={darkMode ? 'text-white/30 flex-shrink-0' : 'text-black/30 flex-shrink-0'} />
+                        )}
+                        {isEditing ? (
+                            <input
+                                autoFocus
+                                value={tempLabel}
+                                onChange={e => setTempLabel(e.target.value)}
+                                onKeyDown={e => {
+                                    e.stopPropagation();
+                                    if (e.key === 'Enter') commitRename();
+                                }}
+                                onBlur={commitRename}
+                                className={`bg-transparent text-xs font-semibold border-b border-primary/40 focus:outline-none w-full
+                    ${darkMode ? 'text-white' : 'text-slate-800'}`}
+                            />
+                        ) : (
+                            <span
+                                onDoubleClick={() => canEdit !== false && setIsEditing(true)}
+                                title="Double-click to rename"
+                                className={`text-xs font-semibold truncate cursor-text
+                    ${darkMode ? 'text-white/50' : 'text-slate-500'}`}
+                            >
+                                {data?.label || title}
+                            </span>
+                        )}
+                    </div>
+                    {!data?.isLocked && canEdit !== false && (
+                        <button
+                            onClick={deleteMe}
+                            className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-all
+                  bg-base-100 border border-base-300/40 text-base-content/80 shadow-sm `}
                         >
-                            {data?.label || title}
-                        </span>
+                            <Trash2 size={11} />
+                        </button>
                     )}
                 </div>
-                {!data?.isLocked && canEdit !== false && (
-                    <button
-                        onClick={deleteMe}
-                        className={`opacity-0 group-hover:opacity-100 p-1 rounded-md transition-all
-              bg-base-100 border border-base-300/40 text-base-content/80 shadow-sm `}
-                    >
-                        <Trash2 size={11} />
-                    </button>
-                )}
-            </div>
+            )}
 
             {/* Content — flex-1 allows children to fill resized height */}
-            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-0">
+                {hideHeader && !data?.isLocked && canEdit !== false && (
+                    <button
+                        onClick={deleteMe}
+                        className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all z-20
+                        bg-black/5 hover:bg-black/10 text-slate-500 hover:text-red-500`}
+                    >
+                        <Trash2 size={12} />
+                    </button>
+                )}
                 {children}
             </div>
+
+            <NodeResizer
+                isVisible={selected && !data?.isLocked && canEdit !== false}
+                minWidth={minWidth}
+                minHeight={minHeight}
+                onResize={(evt, params) => {
+                    const changes = { width: params.width, height: params.height };
+                    setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, ...changes } } : n));
+                    if (onSaveNode) onSaveNode(id, changes);
+                }}
+            />
+
+            <style>{`
+                /* Hide the indigo boundary lines */
+                .react-flow__node-resizer__line {
+                    display: none !important;
+                }
+                
+                /* Completely hide all visual resize handles/dots across all React Flow versions */
+                .react-flow__resize-control,
+                .react-flow__node-resizer__handle,
+                .react-flow__resize-control.handle {
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    min-width: 0 !important;
+                    min-height: 0 !important;
+                }
+                
+                /* Hide all handles except bottom-right visually */
+                .react-flow__resize-control:not(.bottom):not(.right),
+                .react-flow__node-resizer__handle:not(.bottom-right) {
+                    display: none !important;
+                    pointer-events: none !important;
+                }
+
+                /* Make the bottom-right handle a large invisible hit area */
+                .react-flow__resize-control.bottom.right,
+                .react-flow__node-resizer__handle.bottom-right,
+                .react-flow__resize-control.handle.bottom.right {
+                    display: block !important;
+                    width: 60px !important;
+                    height: 60px !important;
+                    right: -10px !important;
+                    bottom: -10px !important;
+                    background: transparent !important;
+                    border: none !important;
+                    cursor: nwse-resize !important;
+                    z-index: 9999 !important;
+                    pointer-events: all !important;
+                }
+
+                /* Show a very subtle indigo indicator only on hover so users know where to pull */
+                .react-flow__resize-control.bottom.right:hover::after,
+                .react-flow__node-resizer__handle.bottom-right:hover::after,
+                .react-flow__resize-control.handle.bottom.right:hover::after {
+                    content: "";
+                    position: absolute;
+                    right: 15px;
+                    bottom: 15px;
+                    width: 15px;
+                    height: 15px;
+                    border-right: 2px solid #6366f1;
+                    border-bottom: 2px solid #6366f1;
+                    opacity: 0.6;
+                    pointer-events: none;
+                }
+            `}</style>
         </div>
     );
 };

@@ -1,11 +1,12 @@
 import { 
     Inbox, FileText, Image, Video, Volume2, Copy,
-    MousePointer2, Hand, Eraser, Package, MessageCircle 
+    MousePointer2, Hand, Eraser, Package, MessageCircle, StickyNote
 } from 'lucide-react';
 
 export const NODE_PALETTE = [
     { type: 'wan_input', name: 'Input', icon: Inbox, desc: 'Starting data', color: 'bg-info/15 text-info border-info/20', category: 'basics' },
     { type: 'prompt', name: 'Prompt Template', icon: FileText, desc: 'Template with vars', color: 'bg-primary/15 text-primary border-primary/20', category: 'basics' },
+    { type: 'note', name: 'Note', icon: StickyNote, desc: 'Floating note', color: 'bg-amber-500/20 text-amber-600 border-amber-500/30', category: 'basics' },
     { type: 'wan_image_t2i', name: 'T2I · Text to Image',   icon: Image,  desc: 'Text → Image (wan2.6)',          color: 'bg-warning/15 text-warning border-warning/20',      category: 'media' },
     { type: 'wan_image_edit', name: 'Image Edit · Multi-Ref', icon: Copy,   desc: 'Edit/Combine Images (wan2.6)', color: 'bg-warning/15 text-warning border-warning/20',      category: 'media' },
     { type: 'wan_video_t2v', name: 'T2V · Text to Video',        icon: Video,  desc: 'Text → Video (wan2.6-t2v)',     color: 'bg-secondary/15 text-secondary border-secondary/20', category: 'media' },
