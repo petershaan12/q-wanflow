@@ -238,43 +238,60 @@ const InnerWorkflowEditor = () => {
         const st = sourceNode.type;
         const sat = sourceNode.data?.assetType || 'image';
 
-        // Cegah double connection pada handle yang sama
-        const isAlreadyConnected = edges.some(e => e.target === connection.target && e.targetHandle === h);
-        if (isAlreadyConnected) return false;
+        // Allow multiple connections to the same handle (e.g. for multi-reference assets or concatenating prompts)
+        const existingEdges = edges.filter(e => e.target === connection.target && e.targetHandle === h);
+        
+        // Prevent strictly duplicate edges (same source handle to same target handle)
+        const isDuplicate = existingEdges.some(e => e.source === connection.source && e.sourceHandle === connection.sourceHandle);
+        if (isDuplicate) return false;
 
-        // 1. Handle Teks / Prompt
+        // R2V specific limit: DashScope sum <= 5
+        if (h === 'ref-media' && existingEdges.length >= 5) return false;
+
+        // --- Data Type Validation Logic ---
+        const isInput = (st === 'wan_input' || st === 'input');
+        const assetType = sourceNode.data?.assetType || 'image';
+
+        // 1. Text / Prompt Handles
         if (h.includes('prompt') || h.includes('text')) {
-            // Data Source (Input) can be anything, we'll try to use it as text if connected here
-            if (st === 'wan_input' || st === 'input') return true;
-            return ['prompt', 'text', 'qwen_text', 'text_to_speech', 'wan_video_t2v', 'wan_video_i2v'].includes(st);
+            if (isInput) return assetType === 'text';
+            return ['prompt', 'text', 'qwen_text', 'note'].includes(st);
         }
 
-        // 2. Handle Gambar / Frame (ref-image, first-frame, etc)
-        if (h.includes('image') || h.includes('frame')) {
-            if (st === 'wan_input' || st === 'input') return true;
-            // Also allow video nodes to connect to image slots (first frame logic)
-            return [
-                'wan_image_t2i', 'wan_image_edit', 'wan_image',
-                'wan_video_t2v', 'wan_video_i2v', 'wan_video_r2v', 'wan_video_ifi', 'wan_video'
-            ].includes(st);
+        // 2. Reference / Media / Image / Video Handles
+        if (h.includes('image') || h.includes('frame') || h.includes('media') || h.includes('video')) {
+            // Special case for R2V 'ref-media': accepts mixed images and videos
+            if (h === 'ref-media') {
+                if (isInput) return ['image', 'video', 'file'].includes(assetType);
+                return [
+                    'wan_image_t2i', 'wan_image_edit', 'wan_image',
+                    'wan_video_t2v', 'wan_video_i2v', 'wan_video_r2v', 'wan_video_ifi', 'wan_video'
+                ].includes(st);
+            }
+
+            // Specific Video handles
+            if (h.includes('video')) {
+                if (isInput) return assetType === 'video' || assetType === 'file';
+                return ['wan_video_t2v', 'wan_video_i2v', 'wan_video_r2v', 'wan_video_ifi', 'wan_video'].includes(st);
+            }
+
+            // Specific Image/Frame handles
+            if (h.includes('image') || h.includes('frame')) {
+                if (isInput) return assetType === 'image' || assetType === 'file';
+                // We allow video nodes to connect to image handles too (extracting first frame)
+                return [
+                    'wan_image_t2i', 'wan_image_edit', 'wan_image',
+                    'wan_video_t2v', 'wan_video_i2v', 'wan_video_r2v', 'wan_video_ifi'
+                ].includes(st);
+            }
         }
 
-        // 3. Handle Video (ref-video)
-        if (h.includes('video')) {
-            if (st === 'wan_input' || st === 'input') return true;
-            return [
-                'wan_video_t2v', 'wan_video_i2v', 'wan_video_r2v', 'wan_video_ifi', 'wan_video',
-                'wan_image_t2i', 'wan_image_edit', 'wan_image'
-            ].includes(st);
-        }
-
-        // 4. Handle Audio
+        // 3. Audio Handles
         if (h.includes('audio')) {
-            if (st === 'wan_input' || st === 'input') return true;
-            return st === 'text_to_speech' || st === 'audio';
+            if (isInput) return assetType === 'audio';
+            return ['text_to_speech', 'audio', 'wan_video_t2v', 'wan_video_i2v', 'wan_video_r2v'].includes(st);
         }
 
-        // Allow all other connections by default
         return true;
     }, [nodes, edges]);
 

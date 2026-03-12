@@ -109,6 +109,7 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
                     clearStatus={clearStatus}
                     dark={dark}
                 />
+
                 <PromptArea prompt={prompt} setPrompt={setPrompt} upd={upd} dark={dark} canEdit={canEdit} />
                 {useNeg && <NegativePromptArea negativePrompt={negativePrompt} setNegativePrompt={setNegativePrompt} upd={upd} dark={dark} canEdit={canEdit} />}
                 <ControlsRow dark={dark} generating={generating} onGenerate={onGenerate} onCancel={handleCancel} canEdit={canEdit}>
@@ -122,8 +123,8 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
                     </div>
                     <ConnectionBadge
                         count={connectedPromptsCount}
-                        imageLinked={referenceUrls.some(u => u.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i))}
-                        videoLinked={referenceUrls.some(u => u.match(/\.(mp4|webm|avi|mov)/i))}
+                        imageLinked={referenceUrls.filter(u => u.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i)).length}
+                        videoLinked={referenceUrls.filter(u => u.match(/\.(mp4|webm|avi|mov)/i)).length}
                     />
                 </ControlsRow>
             </NodeBase>

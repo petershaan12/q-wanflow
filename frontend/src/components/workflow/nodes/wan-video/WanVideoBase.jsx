@@ -77,6 +77,13 @@ export const getLinkedMediaUrls = (id, handleId, getEdges, getNodes) => {
         if (data.imageUrl) addUrl(data.imageUrl, 'image');
         if (data.videoUrl) addUrl(data.videoUrl, 'video');
         if (data.url) addUrl(data.url, data.assetType);
+        
+        // 3. Fallback for generic Input nodes if other fields are missing
+        if (!data.imageUrl && !data.videoUrl && !data.url) {
+            // Some nodes might store their primary payload in 'val' or 'content'
+            if (data.val) addUrl(data.val, data.assetType);
+            if (data.content) addUrl(data.content, data.assetType);
+        }
     });
 
     return results;
@@ -209,36 +216,45 @@ export const ControlsRow = ({ dark, children, generating, onGenerate, onCancel, 
 /**
  * Badge shown when external prompts or audio are connected.
  */
-export const ConnectionBadge = ({ count, audioLinked, imageLinked, videoLinked }) => (
-    <>
-        {count > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 animate-fade-in w-fit">
-                <Sparkles size={10} className="text-primary animate-pulse" />
-                <span className="text-[10px] font-bold text-primary/70 uppercase tracking-tight truncate">
-                    {count} Ext Prompt{count > 1 ? 's' : ''}
-                </span>
-            </div>
-        )}
-        {imageLinked && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-500/5 border border-indigo-500/10 animate-fade-in w-fit">
-                <Image size={10} className="text-indigo-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-indigo-500/70 uppercase tracking-tight">Img</span>
-            </div>
-        )}
-        {videoLinked && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/5 border border-amber-500/10 animate-fade-in w-fit">
-                <Video size={10} className="text-amber-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-amber-500/70 uppercase tracking-tight">Vid</span>
-            </div>
-        )}
-        {audioLinked && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-green-500/5 border border-green-500/10 animate-fade-in w-fit">
-                <Volume2 size={10} className="text-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-green-500/70 uppercase tracking-tight">Audio</span>
-            </div>
-        )}
-    </>
-);
+export const ConnectionBadge = ({ count, audioLinked, imageLinked, videoLinked }) => {
+    const imgCount = typeof imageLinked === 'number' ? imageLinked : (imageLinked ? 1 : 0);
+    const vidCount = typeof videoLinked === 'number' ? videoLinked : (videoLinked ? 1 : 0);
+    
+    return (
+        <>
+            {count > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 animate-fade-in w-fit">
+                    <Sparkles size={10} className="text-primary animate-pulse" />
+                    <span className="text-[10px] font-bold text-primary/70 uppercase tracking-tight truncate">
+                        {count} Ext Prompt{count > 1 ? 's' : ''}
+                    </span>
+                </div>
+            )}
+            {imgCount > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-500/5 border border-indigo-500/10 animate-fade-in w-fit">
+                    <Image size={10} className="text-indigo-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-indigo-500/70 uppercase tracking-tight">
+                        {imgCount > 1 ? `${imgCount} ` : ''}Img
+                    </span>
+                </div>
+            )}
+            {vidCount > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/5 border border-amber-500/10 animate-fade-in w-fit">
+                    <Video size={10} className="text-amber-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-amber-500/70 uppercase tracking-tight">
+                        {vidCount > 1 ? `${vidCount} ` : ''}Vid
+                    </span>
+                </div>
+            )}
+            {audioLinked && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-green-500/5 border border-green-500/10 animate-fade-in w-fit">
+                    <Volume2 size={10} className="text-green-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-green-500/70 uppercase tracking-tight">Audio</span>
+                </div>
+            )}
+        </>
+    );
+};
 
 /**
  * useVideoGeneration — shared loading state + generate/enhance logic.

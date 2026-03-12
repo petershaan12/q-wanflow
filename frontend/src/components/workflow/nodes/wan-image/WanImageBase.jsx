@@ -53,19 +53,18 @@ export const getLinkedImageUrl = (id, handleId, getEdges, getNodes) => {
     const data = sourceNode.data || {};
     // 1. Direct image field
     if (data.imageUrl) return data.imageUrl;
+    if (data.url && (data.assetType === 'image' || data.url.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i))) return data.url;
 
-    // 2. Input/Source nodes
-    if (sourceNode.type === 'input' || sourceNode.type === 'wan_input') {
-        const type = data.assetType || 'image';
-        // If it's explicitly an image, or it looks like a URL pointing to an image
-        if (type === 'image' || (data.url && data.url.match(/\.(jpeg|jpg|gif|png|webp)/i))) {
-            return data.url || '';
-        }
+    // 2. Fallback to generic URL/Content if it looks like an image
+    const potentialUrl = data.url || data.content || data.val || '';
+    if (typeof potentialUrl === 'string' && potentialUrl.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i)) {
+        return potentialUrl;
     }
 
-    // 3. Fallback to generic URL/Content if it looks like an image
-    if (data.url && data.url.match(/\.(jpeg|jpg|gif|png|webp)/i)) return data.url;
-    if (data.content && data.content.match(/\.(jpeg|jpg|gif|png|webp)/i)) return data.content;
+    // 3. Some nodes might store the output image in 'result' (e.g. specialized AI nodes)
+    if (data.result && typeof data.result === 'string' && data.result.startsWith('http')) {
+        return data.result;
+    }
 
     return '';
 };
