@@ -1,15 +1,41 @@
-import React, { memo, useState, useRef, useEffect } from 'react';
-import { Position, useReactFlow, useEdges } from '@xyflow/react';
-import { Volume2, Type, Play, Pause, Square, Languages, Sparkles } from 'lucide-react';
+import React, { memo, useState, useRef, useEffect, useCallback } from 'react';
+import { Position, useReactFlow } from '@xyflow/react';
+import { Volume2, Type, Play, Pause, Languages, Sparkles } from 'lucide-react';
 import NodeBase from './NodeBase';
 import { NodeHandle, SelectPill, GenerateButton } from './NodePrimitives';
 import useThemeStore from '../../../stores/themeStore';
 import aiService from '../../../services/aiService';
 import AILoadingOverlay from './AILoadingOverlay';
+import { useWorkflowContext } from '../../../context/WorkflowContext';
+import { useDebouncedNodeUpdate } from '../../../hooks/useDebounce';
 
-const TextToSpeechNode = memo(({ id, data, selected, showToast, onDeleteNode, canEdit }) => {
+// Static options - moved outside component to prevent recreation on every render
+const VOICE_OPTIONS = [
+    { label: 'Momo (F)', value: 'Momo' },
+    { label: 'Vivian (F)', value: 'Vivian' },
+    { label: 'Moon (M)', value: 'Moon' },
+    { label: 'Cherry (F)', value: 'Cherry' },
+    { label: 'Coco (F)', value: 'Coco' },
+    { label: 'Maji (M)', value: 'Maji' }
+];
+
+const LANG_OPTIONS = [
+    { label: 'English', value: 'english' },
+    { label: 'Chinese', value: 'chinese' },
+    { label: 'Japanese', value: 'japanese' },
+    { label: 'Korean', value: 'korean' },
+    { label: 'French', value: 'french' },
+    { label: 'Spanish', value: 'spanish' },
+    { label: 'German', value: 'german' },
+    { label: 'Italian', value: 'italian' },
+    { label: 'Portuguese', value: 'portuguese' },
+    { label: 'Russian', value: 'russian' },
+];
+
+const TextToSpeechNode = memo(({ id, data, selected }) => {
     const { setNodes, getNodes, getEdges } = useReactFlow();
     const { darkMode } = useThemeStore();
+    const { canEdit, showToast, deleteNode: onDeleteNode } = useWorkflowContext();
 
     const [prompt, setPrompt] = useState(data.prompt || '');
     const [voice, setVoice] = useState(data.voice || 'Momo');
@@ -38,8 +64,13 @@ const TextToSpeechNode = memo(({ id, data, selected, showToast, onDeleteNode, ca
         if (audioRef.current) audioRef.current.currentTime = time;
     };
 
-    const upd = (k, v) =>
-        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, [k]: v } } : n));
+    // Debounced update for text input
+    const debouncedUpdate = useDebouncedNodeUpdate(setNodes, id, 150);
+
+    // Direct update for non-text fields (selections, etc.)
+    const upd = useCallback((k, v) =>
+        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, [k]: v } } : n)),
+        [setNodes, id]);
 
     const getLatestLinkedPrompt = () => {
         const currentEdges = getEdges();
@@ -140,27 +171,12 @@ const TextToSpeechNode = memo(({ id, data, selected, showToast, onDeleteNode, ca
         }
     };
 
-    const voiceOpts = [
-        { label: 'Momo (F)', value: 'Momo' },
-        { label: 'Vivian (F)', value: 'Vivian' },
-        { label: 'Moon (M)', value: 'Moon' },
-        { label: 'Cherry (F)', value: 'Cherry' },
-        { label: 'Coco (F)', value: 'Coco' },
-        { label: 'Maji (M)', value: 'Maji' }
-    ];
-
-    const langOpts = [
-        { label: 'English', value: 'english' },
-        { label: 'Chinese', value: 'chinese' },
-        { label: 'Japanese', value: 'japanese' },
-        { label: 'Korean', value: 'korean' },
-        { label: 'French', value: 'french' },
-        { label: 'Spanish', value: 'spanish' },
-        { label: 'German', value: 'german' },
-        { label: 'Italian', value: 'italian' },
-        { label: 'Portuguese', value: 'portuguese' },
-        { label: 'Russian', value: 'russian' },
-    ];
+    // Debounced handler for prompt text input
+    const handlePromptChange = useCallback((e) => {
+        const v = e.target.value;
+        setPrompt(v);
+        debouncedUpdate('prompt', v);
+    }, [debouncedUpdate]);
 
     return (
         <div className="relative">
@@ -177,7 +193,7 @@ const TextToSpeechNode = memo(({ id, data, selected, showToast, onDeleteNode, ca
                                     {audioUrl ? 'Ready to Play' : 'Empty'}
                                 </span>
                                 <span className={`text-xs font-bold truncate max-w-[150px] ${darkMode ? 'text-white/80' : 'text-slate-700'}`}>
-                                    {voiceOpts.find(v => v.value === voice)?.label || voice}
+                                    {VOICE_OPTIONS.find(v => v.value === voice)?.label || voice}
                                 </span>
                             </div>
                             <button
@@ -232,7 +248,7 @@ const TextToSpeechNode = memo(({ id, data, selected, showToast, onDeleteNode, ca
                     <textarea
                         value={prompt}
                         rows={3}
-                        onChange={e => { setPrompt(e.target.value); upd('prompt', e.target.value); }}
+                        onChange={handlePromptChange}
                         onKeyDown={(e) => e.stopPropagation()}
                         placeholder="Enter text to synthesize..."
                         readOnly={canEdit === false}
@@ -254,15 +270,15 @@ const TextToSpeechNode = memo(({ id, data, selected, showToast, onDeleteNode, ca
                             </button>
                         )}
                         <SelectPill
-                            label={<div className="flex items-center gap-1"><Languages size={10} />{langOpts.find(l => l.value === language)?.label}</div>}
-                            options={langOpts}
+                            label={<div className="flex items-center gap-1"><Languages size={10} />{LANG_OPTIONS.find(l => l.value === language)?.label}</div>}
+                            options={LANG_OPTIONS}
                             value={language}
                             onChange={v => { setLanguage(v); upd('language', v); }}
                             disabled={canEdit === false}
                         />
                         <SelectPill
-                            label={voiceOpts.find(v => v.value === voice)?.label || 'Voice'}
-                            options={voiceOpts}
+                            label={VOICE_OPTIONS.find(v => v.value === voice)?.label || 'Voice'}
+                            options={VOICE_OPTIONS}
                             value={voice}
                             onChange={v => { setVoice(v); upd('voice', v); }}
                             disabled={canEdit === false}

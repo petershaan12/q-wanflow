@@ -1,23 +1,31 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { StickyNote } from 'lucide-react';
 import NodeBase from './NodeBase';
 import useThemeStore from '../../../stores/themeStore';
 import useAuthStore from '../../../stores/authStore';
+import { useWorkflowContext } from '../../../context/WorkflowContext';
+import { useDebouncedCallback } from '../../../hooks/useDebounce';
 
-const NoteNode = memo(({ id, data, selected, onSaveNode, onDeleteNode, canEdit }) => {
+const NoteNode = memo(({ id, data, selected }) => {
     const { setNodes } = useReactFlow();
     const { darkMode } = useThemeStore();
     const { user } = useAuthStore();
+    const { canEdit, deleteNode: onDeleteNode } = useWorkflowContext();
     const [val, setVal] = useState(data.content || '');
 
     const authorName = data.authorName || user?.name || 'Anonymous';
 
-    const handleChange = (e) => {
-        const v = e.target.value;
-        setVal(v);
+    // Debounced update function
+    const updateNodeData = useDebouncedCallback((v) => {
         setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, content: v, label: v.substring(0, 30), authorName } } : n));
-    };
+    }, 150);
+
+    const handleChange = useCallback((e) => {
+        const v = e.target.value;
+        setVal(v); // Update local state immediately
+        updateNodeData(v); // Debounced update to React Flow
+    }, [updateNodeData]);
 
     return (
         <div className="relative">
@@ -29,7 +37,6 @@ const NoteNode = memo(({ id, data, selected, onSaveNode, onDeleteNode, canEdit }
                 icon={StickyNote}
                 minWidth={250}
                 minHeight={250}
-                onSaveNode={onSaveNode}
                 onDeleteNode={onDeleteNode}
                 canEdit={canEdit}
                 hideHeader={true}

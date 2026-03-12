@@ -11,7 +11,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { Save, Share2, Search } from 'lucide-react';
+import { Save, Share2 } from 'lucide-react';
 
 import {
     InputNode, PromptNode,
@@ -34,6 +34,22 @@ import ZoomControls from '../components/workflow/editor/ZoomControls';
 import NodeContextMenu from '../components/workflow/editor/NodeContextMenu';
 import { useWorkflowEditor, isTextEditingElement } from '../hooks/useWorkflowEditor';
 import { TOOL_CURSOR, NODE_PALETTE } from '../components/workflow/editor/EditorConstants';
+import { WorkflowProvider } from '../context/WorkflowContext';
+
+// Static nodeTypes - defined outside component to prevent re-creation
+const NODE_TYPES = {
+    wan_input: InputNode,
+    prompt: PromptNode,
+    wan_image_t2i: WanImageT2I,
+    wan_image_edit: WanImageEdit,
+    wan_video_t2v: WanVideoT2V,
+    wan_video_i2v: WanVideoI2V,
+    wan_video_r2v: WanVideoR2V,
+    wan_video_ifi: WanVideoIFI,
+    text_to_speech: TextToSpeechNode,
+    comment: CommentNode,
+    note: NoteNode,
+};
 
 const InnerWorkflowEditor = () => {
     const { id: workflowId } = useParams();
@@ -77,20 +93,13 @@ const InnerWorkflowEditor = () => {
     const isOwner = user?.id === ownerId;
     const canEdit = isOwner || sharePermission === 'edit';
 
-    // Node Types definition
-    const nodeTypes = useMemo(() => ({
-        wan_input: (props) => <InputNode         {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        prompt: (props) => <PromptNode         {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        wan_image_t2i: (props) => <WanImageT2I        {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        wan_image_edit: (props) => <WanImageEdit       {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        wan_video_t2v: (props) => <WanVideoT2V        {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        wan_video_i2v: (props) => <WanVideoI2V        {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        wan_video_r2v: (props) => <WanVideoR2V        {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        wan_video_ifi: (props) => <WanVideoIFI        {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        text_to_speech: (props) => <TextToSpeechNode   {...props} canEdit={canEdit} showToast={showToast} onDeleteNode={deleteNode} />,
-        comment: (props) => <CommentNode         {...props} canEdit={canEdit} showToast={showToast} onSaveNode={updateNodeConfig} />,
-        note: (props) => <NoteNode            {...props} canEdit={canEdit} onSaveNode={updateNodeConfig} onDeleteNode={deleteNode} />,
-    }), [showToast, deleteNode, updateNodeConfig, canEdit]);
+    // Context value for all node components - memoized to prevent re-renders
+    const workflowContextValue = useMemo(() => ({
+        canEdit,
+        showToast,
+        deleteNode,
+        updateNodeConfig,
+    }), [canEdit, showToast, deleteNode, updateNodeConfig]);
 
     const onMoveEnd = useCallback((event, viewport) => {
         if (viewport) setZoom(viewport.zoom);
@@ -347,20 +356,21 @@ const InnerWorkflowEditor = () => {
                         onDragStart={(e, type) => e.dataTransfer.setData('application/reactflow', type)}
                         onInsertNode={insertNodeAtCenter}
                     />
+                    <WorkflowProvider value={workflowContextValue}>
                     <ReactFlow
                         nodes={nodes}
                         edges={edges}
-                            onNodesChange={onNodesChangeWrapper}
-                            onEdgesChange={canEdit ? onEdgesChangeWrapper : undefined}
-                            onConnect={canEdit ? onConnect : undefined}
-                            onReconnect={canEdit ? workflow.onReconnect : undefined}
-                            onNodeClick={onNodeClick}
-                            onEdgeClick={onEdgeClick}
-                            onPaneClick={onPaneClick}
-                            onNodeContextMenu={onNodeContextMenu}
-                            onDrop={canEdit ? onDrop : undefined}
-                            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
-                            nodeTypes={nodeTypes}
+                        onNodesChange={onNodesChangeWrapper}
+                        onEdgesChange={canEdit ? onEdgesChangeWrapper : undefined}
+                        onConnect={canEdit ? onConnect : undefined}
+                        onReconnect={canEdit ? workflow.onReconnect : undefined}
+                        onNodeClick={onNodeClick}
+                        onEdgeClick={onEdgeClick}
+                        onPaneClick={onPaneClick}
+                        onNodeContextMenu={onNodeContextMenu}
+                        onDrop={canEdit ? onDrop : undefined}
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                        nodeTypes={NODE_TYPES}
                         onMoveEnd={onMoveEnd}
                         panOnDrag={activeTool === 'hand' ? [0, 1] : [1]}
                         fitView
@@ -385,6 +395,7 @@ const InnerWorkflowEditor = () => {
                             maskColor="rgba(0, 0, 0, 0.1)"
                         />
                     </ReactFlow>
+                    </WorkflowProvider>
 
                     <ZoomControls zoom={zoom} onZoomIn={() => reactFlowInstance.zoomIn()} onZoomOut={() => reactFlowInstance.zoomOut()} onZoomSet={(l) => reactFlowInstance.zoomTo(l)} onFitView={() => reactFlowInstance.fitView()} />
 

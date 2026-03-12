@@ -1,24 +1,30 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { Type, Sparkles } from 'lucide-react';
 import NodeBase from './NodeBase';
 import { NodeHandle } from './NodePrimitives';
 import useThemeStore from '../../../stores/themeStore';
 import aiService from '../../../services/aiService';
+import { useWorkflowContext } from '../../../context/WorkflowContext';
+import { useDebouncedNodeUpdate } from '../../../hooks/useDebounce';
 
-const PromptNode = memo(({ id, data, selected, onSaveNode, showToast, onDeleteNode, canEdit }) => {
+const PromptNode = memo(({ id, data, selected }) => {
     const { setNodes } = useReactFlow();
     const { darkMode } = useThemeStore();
+    const { canEdit, showToast, deleteNode: onDeleteNode } = useWorkflowContext();
     const [val, setVal] = useState(data.prompt_template || '');
     const [enhancing, setEnhancing] = useState(false);
 
-    const handleChange = (e) => {
-        const v = e.target.value;
-        setVal(v);
-        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, prompt_template: v } } : n));
-    };
+    // Debounced update to prevent excessive setNodes calls
+    const debouncedUpdate = useDebouncedNodeUpdate(setNodes, id, 150);
 
-    const handleEnhance = async () => {
+    const handleChange = useCallback((e) => {
+        const v = e.target.value;
+        setVal(v); // Update local state immediately for responsive UI
+        debouncedUpdate('prompt_template', v); // Debounced update to React Flow
+    }, [debouncedUpdate]);
+
+    const handleEnhance = useCallback(async () => {
         if (!val.trim() || enhancing) return;
         setEnhancing(true);
         try {
@@ -28,6 +34,7 @@ const PromptNode = memo(({ id, data, selected, onSaveNode, showToast, onDeleteNo
                 throw new Error('Enhance result is empty. Prompt lama tetap dipakai.');
             }
             setVal(normalized);
+            // Direct update for enhance result (not debounced)
             setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, prompt_template: normalized } } : n));
             showToast?.('success', 'Prompt enhanced');
         } catch (err) {
@@ -36,13 +43,13 @@ const PromptNode = memo(({ id, data, selected, onSaveNode, showToast, onDeleteNo
         } finally {
             setEnhancing(false);
         }
-    };
+    }, [val, enhancing, setNodes, id, showToast]);
 
     return (
         <div className="relative">
             <NodeHandle type="source" position={Position.Right} id="output" icon={Type} top="50%" label="Text" />
 
-            <NodeBase id={id} data={data} selected={selected} title="Prompt" icon={Type} minWidth={400} minHeight={160} onSaveNode={onSaveNode} onDeleteNode={onDeleteNode} canEdit={canEdit}>
+            <NodeBase id={id} data={data} selected={selected} title="Prompt" icon={Type} minWidth={400} minHeight={160} onDeleteNode={onDeleteNode} canEdit={canEdit}>
                 <div className="px-3 py-2 flex-1 flex flex-col min-h-0">
                     <textarea
                         value={val}

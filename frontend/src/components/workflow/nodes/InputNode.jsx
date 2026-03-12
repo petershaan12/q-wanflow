@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import { Position, useReactFlow } from '@xyflow/react';
 import { Database, Globe, Image as ImageIcon, Video, FileText, Folder, Music } from 'lucide-react';
 import NodeBase from './NodeBase';
@@ -6,10 +6,22 @@ import { NodeHandle, SelectPill } from './NodePrimitives';
 import useThemeStore from '../../../stores/themeStore';
 import { assetService } from '../../../services/assetService';
 import { ChevronRight, Search, X } from 'lucide-react';
+import { useWorkflowContext } from '../../../context/WorkflowContext';
+import { useDebouncedNodeUpdate } from '../../../hooks/useDebounce';
 
-const InputNode = memo(({ id, data, selected, onDeleteNode, canEdit }) => {
+// Static options - moved outside to prevent recreation
+const TYPE_OPTIONS = [
+    { label: 'Image', value: 'image' },
+    { label: 'Video', value: 'video' },
+    { label: 'Audio', value: 'audio' },
+    { label: 'Text', value: 'text' },
+    { label: 'File', value: 'file' },
+];
+
+const InputNode = memo(({ id, data, selected }) => {
     const { setNodes } = useReactFlow();
     const { darkMode } = useThemeStore();
+    const { canEdit, deleteNode: onDeleteNode } = useWorkflowContext();
     const [assetType, setAssetType] = useState(data.assetType || 'image');
     const [url, setUrl] = useState(data.url || '');
     const [showAssetPicker, setShowAssetPicker] = useState(false);
@@ -17,16 +29,13 @@ const InputNode = memo(({ id, data, selected, onDeleteNode, canEdit }) => {
     const [assetLoading, setAssetLoading] = useState(false);
     const [assetSearch, setAssetSearch] = useState('');
 
-    const upd = (k, v) =>
-        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, [k]: v } } : n));
+    // Debounced update for URL input
+    const debouncedUpdate = useDebouncedNodeUpdate(setNodes, id, 200);
 
-    const typeOptions = [
-        { label: 'Image', value: 'image' },
-        { label: 'Video', value: 'video' },
-        { label: 'Audio', value: 'audio' },
-        { label: 'Text', value: 'text' },
-        { label: 'File', value: 'file' },
-    ];
+    // Direct update for non-text fields (type selection, etc.)
+    const upd = useCallback((k, v) =>
+        setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, [k]: v } } : n)),
+        [setNodes, id]);
 
     const TypeIcon = { image: ImageIcon, video: Video, audio: Music, text: FileText, file: Folder }[assetType] || Folder;
 
@@ -82,7 +91,7 @@ const InputNode = memo(({ id, data, selected, onDeleteNode, canEdit }) => {
                         <div className="flex items-center justify-between">
                             <SelectPill
                                 label={assetType}
-                                options={typeOptions}
+                                options={TYPE_OPTIONS}
                                 value={assetType}
                                 onChange={v => { setAssetType(v); upd('assetType', v); }}
                                 disabled={canEdit === false}
@@ -161,7 +170,7 @@ const InputNode = memo(({ id, data, selected, onDeleteNode, canEdit }) => {
                                 <p className="text-xs opacity-30 group-focus-within:opacity-100 group-focus-within:text-primary transition-all mb-0.5">Asset URL / Source</p>
                                 <input
                                     value={url}
-                                    onChange={e => { setUrl(e.target.value); upd('url', e.target.value); }}
+                                    onChange={e => { setUrl(e.target.value); debouncedUpdate('url', e.target.value); }}
                                     onKeyDown={(e) => e.stopPropagation()}
                                     placeholder="Paste URL or select from assets…"
                                     readOnly={canEdit === false}
