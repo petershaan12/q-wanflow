@@ -5,7 +5,7 @@ import NodeBase from '../NodeBase';
 import { NodeHandle, SelectPill, Toggle } from '../NodePrimitives';
 import useThemeStore from '../../../../stores/themeStore';
 import {
-    mergePromptParts, getLinkedText, getLinkedMediaUrl, getLinkedAudioUrl,
+    mergePromptParts, getLinkedText, getLinkedMediaUrls,
     PromptArea, NegativePromptArea, VideoPreview,
     EnhanceButton, ControlsRow, ConnectionBadge,
     useVideoGeneration,
@@ -31,11 +31,8 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
     const [aspect, setAspect] = useState(data.aspectRatio || '16:9');
     const [duration, setDuration] = useState(data.duration || '5s');
     const [shotType, setShotType] = useState(data.shotType || 'single');
-    const [audio, setAudio] = useState(data.audio !== undefined ? data.audio : true);
     const [model, setModel] = useState(data.model || 'wan2.6-r2v');
-    const [referenceVideoUrl, setReferenceVideoUrl] = useState(data.referenceVideoUrl || '');
-    const [referenceImageUrl, setReferenceImageUrl] = useState(data.referenceImageUrl || '');
-    const [referenceAudioUrl, setReferenceAudioUrl] = useState(data.referenceAudioUrl || '');
+    const [referenceUrls, setReferenceUrls] = useState(data.referenceUrls || []);
     const [useNeg, setUseNeg] = useState(data.useNegativePrompt !== undefined ? data.useNegativePrompt : false);
 
     const {
@@ -46,28 +43,24 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
 
     // Sync connected media
     useEffect(() => {
-        const { video } = getLinkedMediaUrl(id, 'ref-video', getEdges, getNodes);
-        if (video !== referenceVideoUrl) { setReferenceVideoUrl(video); upd('referenceVideoUrl', video); }
+        const { images, videos } = getLinkedMediaUrls(id, 'ref-media', getEdges, getNodes);
+        const allRefs = [...videos, ...images].slice(0, 5); // DashScope limit: sum <= 5
 
-        const { image } = getLinkedMediaUrl(id, 'ref-image', getEdges, getNodes);
-        if (image !== referenceImageUrl) { setReferenceImageUrl(image); upd('referenceImageUrl', image); }
-
-        const aud = getLinkedAudioUrl(id, getEdges, getNodes);
-        if (aud !== referenceAudioUrl) { setReferenceAudioUrl(aud); upd('referenceAudioUrl', aud); }
+        if (JSON.stringify(allRefs) !== JSON.stringify(referenceUrls)) {
+            setReferenceUrls(allRefs);
+            upd('referenceUrls', allRefs);
+        }
     }, [edges]);
 
     const connectedPromptsCount = getEdges().filter(e => e.target === id && e.targetHandle === 'text-prompt').length;
-    const hasVideo = !!referenceVideoUrl;
+    const hasRefs = referenceUrls && referenceUrls.length > 0;
 
     const onGenerate = () => {
-        if (!hasVideo) { showToast?.('error', 'Please connect a Reference Video first'); return; }
+        if (!hasRefs) { showToast?.('error', 'Please connect at least one Reference video or image'); return; }
         const linkedPrompt = getLinkedText(id, 'text-prompt', getEdges, getNodes);
         const effectivePrompt = mergePromptParts(linkedPrompt, prompt);
         const effectiveNeg = useNeg ? (negativePrompt || undefined) : undefined;
         const size = SIZE_MAP[aspect]?.['720'] || '1280*720';
-
-        const referenceUrls = [referenceVideoUrl];
-        if (referenceImageUrl) referenceUrls.push(referenceImageUrl);
 
         handleGenerate({
             prompt: effectivePrompt,
@@ -76,9 +69,7 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
             size,
             duration,
             shot_type: shotType,
-            audio,
             reference_urls: referenceUrls,
-            audio_url: referenceAudioUrl || undefined,
         });
     };
 
@@ -101,10 +92,8 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
 
     return (
         <div className="relative">
-            <NodeHandle type="target" position={Position.Left} id="text-prompt" icon={Type} top="20%" label="Text Prompt" />
-            <NodeHandle type="target" position={Position.Left} id="ref-video" icon={Film} top="45%" label="Reference Video (required)" />
-            <NodeHandle type="target" position={Position.Left} id="ref-image" icon={Image} top="65%" label="Reference Image (optional)" />
-            <NodeHandle type="target" position={Position.Left} id="ref-audio" icon={Volume2} top="85%" label="Reference Audio" />
+            <NodeHandle type="target" position={Position.Left} id="text-prompt" icon={Type} top="25%" label="Text Prompt" />
+            <NodeHandle type="target" position={Position.Left} id="ref-media" icon={Film} top="65%" label="Ref Video/Image (Max 5)" />
             <NodeHandle type="source" position={Position.Right} id="output" icon={Video} top="50%" label="Video Output" />
 
             <NodeBase id={id} data={data} selected={selected} title="R2V · Reference to Video" icon={Video} minWidth={400} onDeleteNode={onDeleteNode} canEdit={canEdit}>
@@ -129,16 +118,12 @@ const WanVideoR2V = memo(({ id, data, selected, showToast, onDeleteNode, canEdit
                     <SelectPill label={shotType.toUpperCase()} options={shotOpts} value={shotType} onChange={v => { setShotType(v); upd('shotType', v); }} disabled={canEdit === false} />
                     <SelectPill label={modelOpts.find(o => o.value === model)?.label || model} options={modelOpts} value={model} onChange={v => { setModel(v); upd('model', v); }} disabled={canEdit === false} />
                     <div className="flex items-center px-1">
-                        <Toggle value={audio} label="Audio" onChange={v => { setAudio(v); upd('audio', v); }} disabled={canEdit === false} />
-                    </div>
-                    <div className="flex items-center px-1">
                         <Toggle value={useNeg} label="Neg" onChange={v => { setUseNeg(v); upd('useNegativePrompt', v); }} disabled={canEdit === false} />
                     </div>
                     <ConnectionBadge
                         count={connectedPromptsCount}
-                        audioLinked={!!referenceAudioUrl}
-                        imageLinked={!!referenceImageUrl}
-                        videoLinked={!!referenceVideoUrl}
+                        imageLinked={referenceUrls.some(u => u.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i))}
+                        videoLinked={referenceUrls.some(u => u.match(/\.(mp4|webm|avi|mov)/i))}
                     />
                 </ControlsRow>
             </NodeBase>

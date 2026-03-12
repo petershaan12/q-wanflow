@@ -120,12 +120,6 @@ def video_generation(user_id: str, prompt: str, duration: str,
         )
 
     if is_r2v:
-        refs = reference_urls or []
-        if not refs:
-            if reference_video_url:
-                refs.append(reference_video_url)
-            if reference_image_url:
-                refs.append(reference_image_url)
         return generate_r2v(
             user_id=user_id, db=db,
             prompt=prompt,
@@ -134,9 +128,7 @@ def video_generation(user_id: str, prompt: str, duration: str,
             size=size,
             aspect_ratio=aspect_ratio,
             shot_type=shot_type,
-            audio=audio,
-            audio_url=audio_url,
-            reference_urls=refs,
+            reference_urls=reference_urls or [],
             negative_prompt=negative_prompt,
         )
 

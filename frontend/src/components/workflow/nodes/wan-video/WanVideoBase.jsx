@@ -41,34 +41,56 @@ export const getLinkedText = (id, handleId, getEdges, getNodes) => {
 };
 
 /**
- * Get media URL from a connected node (image or video).
+ * Get media URL(s) from connected nodes (image or video).
+ * If multiple nodes are connected to the same handle, returns an array.
+ */
+export const getLinkedMediaUrls = (id, handleId, getEdges, getNodes) => {
+    const connectedEdges = getEdges().filter(e => e.target === id && e.targetHandle === handleId);
+    if (!connectedEdges.length) return { images: [], videos: [] };
+
+    const results = { images: [], videos: [] };
+
+    connectedEdges.forEach(edge => {
+        const sourceNode = getNodes().find(n => n.id === edge.source);
+        if (!sourceNode) return;
+
+        const data = sourceNode.data || {};
+
+        // Helper to push to results based on URL format or assetType
+        const addUrl = (url, typeHint) => {
+            if (!url || typeof url !== 'string') return;
+            if (typeHint === 'image' || url.match(/\.(jpeg|jpg|gif|png|webp|bmp)/i)) {
+                results.images.push(url);
+            } else if (typeHint === 'video' || url.match(/\.(mp4|webm|avi|mov)/i)) {
+                results.videos.push(url);
+            }
+        };
+
+        // 1. Array of URLs (if source is another multi-output node)
+        if (Array.isArray(data.imageUrls)) data.imageUrls.forEach(u => addUrl(u, 'image'));
+        if (Array.isArray(data.videoUrls)) data.videoUrls.forEach(u => addUrl(u, 'video'));
+        if (Array.isArray(data.reference_urls)) {
+            data.reference_urls.forEach(u => addUrl(u));
+        }
+
+        // 2. Direct single fields
+        if (data.imageUrl) addUrl(data.imageUrl, 'image');
+        if (data.videoUrl) addUrl(data.videoUrl, 'video');
+        if (data.url) addUrl(data.url, data.assetType);
+    });
+
+    return results;
+};
+
+/**
+ * Legacy compatibility or single-url extractor
  */
 export const getLinkedMediaUrl = (id, handleId, getEdges, getNodes) => {
-    const edge = getEdges().find(e => e.target === id && e.targetHandle === handleId);
-    if (!edge) return { image: '', video: '' };
-    const sourceNode = getNodes().find(n => n.id === edge.source);
-    if (!sourceNode) return { image: '', video: '' };
-
-    const data = sourceNode.data || {};
-    const res = { image: '', video: '' };
-
-    // 1. Direct fields
-    if (data.imageUrl) res.image = data.imageUrl;
-    if (data.videoUrl) res.video = data.videoUrl;
-
-    // 2. Input/Source nodes
-    if (sourceNode.type === 'wan_input' || sourceNode.type === 'input') {
-        const type = data.assetType;
-        const url = data.url || '';
-        if (type === 'image' || url.match(/\.(jpeg|jpg|gif|png|webp)/i)) res.image = url;
-        if (type === 'video' || url.match(/\.(mp4|webm|avi|mov)/i)) res.video = url;
-    }
-
-    // 3. Asset-like fields in generic nodes
-    if (!res.image && data.url?.match(/\.(jpeg|jpg|gif|png|webp)/i)) res.image = data.url;
-    if (!res.video && data.url?.match(/\.(mp4|webm|avi|mov)/i)) res.video = data.url;
-
-    return res;
+    const urls = getLinkedMediaUrls(id, handleId, getEdges, getNodes);
+    return {
+        image: urls.images[0] || '',
+        video: urls.videos[0] || ''
+    };
 };
 
 /**

@@ -205,8 +205,8 @@ def _extract_media_url(data: dict, kind: str) -> str | None:
     for row in _extract_results(data):
         if not isinstance(row, dict):
             continue
-        if kind == "image" and row.get("url"):
-            return row.get("url")
+        if kind == "image" and (row.get("url") or row.get("image_url")):
+            return row.get("url") or row.get("image_url")
         if kind == "video":
             return row.get("video_url") or row.get("url")
         if kind == "audio":

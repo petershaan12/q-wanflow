@@ -43,8 +43,6 @@ def generate_r2v(
     size: str | None = None,           # pre-computed from frontend
     aspect_ratio: str = "16:9",
     shot_type: str = "single",
-    audio: bool = True,
-    audio_url: str | None = None,
     negative_prompt: str | None = None,
 ) -> dict:
     """Generate a reference-to-video clip with the Wan R2V API."""
@@ -67,7 +65,6 @@ def generate_r2v(
         "prompt_extend": True,
         "duration": duration_sec,
         "size": resolved_size,          # NO resolution field for R2V
-        "audio": audio,
     }
     if shot_type:
         parameters["shot_type"] = shot_type
@@ -78,8 +75,6 @@ def generate_r2v(
         "prompt": prompt,
         "reference_urls": reference_urls,
     }
-    if audio_url:
-        input_data["audio_url"] = audio_url
 
     payload = {"model": model, "input": input_data, "parameters": parameters}
     logger.debug(f"R2V payload: {json.dumps(payload, indent=2)}")

@@ -5,7 +5,7 @@ import NodeBase from '../NodeBase';
 import { NodeHandle, SelectPill, Toggle } from '../NodePrimitives';
 import useThemeStore from '../../../../stores/themeStore';
 import {
-    mergePromptParts, getLinkedText, getLinkedMediaUrl,
+    mergePromptParts, getLinkedText,
     PromptArea, NegativePromptArea, VideoPreview,
     EnhanceButton, ControlsRow, ConnectionBadge,
     useVideoGeneration,
