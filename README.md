@@ -49,9 +49,14 @@ The fastest way to deploy is using **Docker Compose**.
     BASE_URL=http://your-server-ip:8000
     ```
 
-3.  **Launch**:
+3.  **Launch app stack**:
     ```bash
-    docker-compose up --build -d
+    docker compose up --build -d
+    ```
+
+4.  **Optional infra stack** (only if you also want PostgreSQL from this repo):
+    ```bash
+    docker compose -f docker-compose.infra.yml up -d
     ```
 
 For detailed production instructions, see [production_guide.md](./production_guide.md).
@@ -83,7 +88,8 @@ For detailed production instructions, see [production_guide.md](./production_gui
 │   ├── src/components/ # Reusable UI & Node Primitives
 │   ├── src/page/       # Main Route Components
 │   └── src/stores/     # Zustand State Management
-└── docker-compose.yml  # Production Orchestration
+├── docker-compose.yml        # App stack (backend + frontend)
+└── docker-compose.infra.yml  # Optional infra stack (PostgreSQL)
 ```
 
 ---

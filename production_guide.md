@@ -2,6 +2,9 @@
 
 Langkah-langkah untuk publish Q-WANFLOW menggunakan database yang sudah ada.
 
+> `docker-compose.yml` sekarang hanya untuk app stack (`backend` + `frontend`).
+> Jika butuh PostgreSQL dari repo ini, pakai `docker-compose.infra.yml` secara terpisah.
+
 ## 1. Persiapan Database
 Jalankan perintah ini di server untuk membuat database baru di dalam container PostgreSQL yang sudah ada (sesuaikan nama container db Anda):
 ```bash
@@ -32,8 +35,11 @@ SUPPORT_EMAIL=
 
 ## 3. Jalankan Aplikasi
 ```bash
-# Jalankan aplikasi (Build dan jalankan menggunakan Docker Compose)
+# Jalankan aplikasi (build & run app stack)
 docker compose up --build -d
+
+# Optional: jika ingin menjalankan PostgreSQL dari repo ini
+docker compose -f docker-compose.infra.yml up -d
 
 # 1. Buat tabel dasar (WAJIB sekali saja)
 docker compose exec backend python scripts/init_db.py

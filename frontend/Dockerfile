@@ -1,4 +1,3 @@
-# frontend/Dockerfile
 # Build Stage
 FROM node:20-slim AS build
 
@@ -14,7 +13,6 @@ RUN npm install
 COPY . .
 
 # Build the Vite application
-# VITE_API_URL can be passed here if needed, but our nginx proxies /api
 RUN npm run build
 
 # Serve Stage
